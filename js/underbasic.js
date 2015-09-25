@@ -1,6 +1,24 @@
 
 var UnderBasic = new (function() {
 
+    this.type = function(content, extended, celtic3) {
+
+        var v = this.variable(content, extended, celtic3);
+
+        if(v)
+            return v;
+
+        if(content.match(/^([0-9\.\+\-\*\/\(\)]+)$/))
+            return 'number';
+
+        if(content.match(/^"(.*)"$/))
+            return 'string';
+
+        if(content.match(/^{(.*)}$/))
+            return 'list';
+
+    };
+
     this.variable = function(varname, extended, celtic3) {
 
         if(varname.match(/^Str([0-9])$/))
@@ -90,21 +108,25 @@ var UnderBasic = new (function() {
             });
 
         code  = code
-            .replace(/(^|\n)function( *)([a-zA-Z0-9_]+)( *)\(([a-zA-Z0-9_, ]*)\)( *){\n((.|\n)*?)\n}(\n|$)/g, function(match, a, b, name, c, argsS, d, content) {
+            .replace(/(^|\n)function( *)([a-zA-Z0-9_]+)( *)\(([a-zA-Z0-9_, \*]*)\)( *){\n((.|\n)*?)\n}(\n|$)/g, function(match, a, b, name, c, argsS, d, content) {
+                var args = [], arg, m;
                 argsS = argsS.trim().match(/("[^"]+"|[^,]+)/g) || [];
 
                 for(var i = 0; i < argsS.length; i += 1) {
-                    argsS[i] = argsS[i].replace(/([^"]+)|("(?:[^"\\]|\\.)+")/g, function($0, $1, $2) {
-                        if ($1) {
-                            return $1.replace(/\s/g, '');
-                        } else {
-                            return $2;
-                        }
+                    arg = argsS[i].trim();
+
+                    m = arg.match(/^(string|number|list|matrix|yvar|picture|GDB|program|appvar|group|application|)( *)(\*|)([a-zA-Z0-9_]+)$/);
+
+                    args.push({
+                        type   : m[1] || false,
+                        pointer: m[3] || false,
+                        name   : m[4]
                     });
+
                 }
 
                 functions[name] = {
-                    args: argsS,
+                    args: args,
                     content: content.trim()
                 };
 
@@ -116,16 +138,27 @@ var UnderBasic = new (function() {
                 code = code.replace(new RegExp('(^|\n)' + i + '( ){1,}(.*?)(\n|$)', 'g'), function(match, a, b, argsS, c) {
                         argsS = argsS.trim().match(/("[^"]+"|[^,]+)/g);
 
-                        var args = {};
+                        var args = {}, e;
 
-                        for(var j = 0; j < functions[i].args.length; j += 1)
-                            args[functions[i].args[j]] = argsS[j].replace(/([^"]+)|("(?:[^"\\]|\\.)+")/g, function($0, $1, $2) {
-                                if ($1) {
+                        for(var j = 0; j < functions[i].args.length; j += 1) {
+                            e = functions[i].args[j];
+
+                            args[e.name] = argsS[j].replace(/([^"]+)|("(?:[^"\\]|\\.)+")/g, function($0, $1, $2) {
+                                return $1 ? $1.replace(/\s/g, '') : $2;
+
+                                /*if ($1) {
                                     return $1.replace(/\s/g, '');
                                 } else {
                                     return $2;
-                                }
+                                }*/
                             });
+
+                            if(e.pointer && !UnderBasic.variable(args[e.name]))
+                                return '\n#&Invalid argument [' + i + ':' + e.name + '] : Must be a pointer&#\n';
+
+                            if(e.type && UnderBasic.type(args[e.name]) !== e.type)
+                                return '\n#&Invalid argument [' + i + ':' + e.name + '] : Type must be ' + e.type + '&#\n';
+                        }
 
                         return a + functions[i].content.replace(/([^\\])\{\{([a-zA-Z0-9_]+)\}\}/g, function(match, pre, varname) {
                             varname = varname.trim();
@@ -154,7 +187,17 @@ var UnderBasic = new (function() {
         while(code.match(/\n\n/))
             code = code.replace(/\n\n/g, '\n');
 
-        return code;
+        match = code.match(/(^|\n)#&(.*)&#(\n|$)/gm);
+
+        if(!match)
+            return code;
+
+        var err = 'Compilation aborted :';
+
+        for(var i = 0; i < match.length; i += 1)
+            err += '\n    ' + match[i].match(/(^|\n)#&(.*)&#(\n|$)/)[2];
+
+        return err;
 
     };
 

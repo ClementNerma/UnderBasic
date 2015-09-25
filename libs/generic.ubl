@@ -1,8 +1,8 @@
 
-function input(text, name) {
+function input(string text, string *name) {
     #tib Input {{text}},{{name}}
 }
 
-function print(text) {
+function print(string text) {
     #tib Disp {{text}}
 }
