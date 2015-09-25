@@ -1,8 +1,0 @@
-
-function input(string text, string *name) {
-    #tib Input {{text}},{{name}}
-}
-
-function print(string text) {
-    #tib Disp {{text}}
-}

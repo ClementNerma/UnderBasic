@@ -1,8 +1,6 @@
 
 "use strict";
 
-var keyWords = ['if', 'else', 'for', 'while', 'repeat', 'function'];
-
 function escapeRegExp(str) {
     return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
 }
@@ -13,7 +11,6 @@ var codeMirrorConfig = {
     indentUnit: 4
 };
 
-var libraries = {};
 var err       = {
     _: 'Failed to load library',
     404: 'Library not found',
@@ -25,5 +22,5 @@ var editor = CodeMirror($('#editor').get(0), codeMirrorConfig);
 var result = CodeMirror($('#result').get(0), codeMirrorConfig);
 
 editor.on('change', function(codemirror, change) {
-    result.setValue(UnderBasic.compile(codemirror.getValue()));
+    result.setValue(UnderBasic.compile(codemirror.getValue()).content);
 });

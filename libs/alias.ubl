@@ -1,0 +1,142 @@
+
+answer : Ans
+
+function input(string text, string *name) {
+    #tib Input {{text}},{{name}}
+}
+
+function echo(text) {
+    #tib Disp {{text}}
+}
+
+function display(text) {
+    #tib Disp {{text}}
+}
+
+function print(text) {
+    #tib Disp {{text}}
+}
+
+function clear() {
+    #tib ClrHome
+}
+
+function clearHome() {
+    #tib ClrHome
+}
+
+function clearDraw() {
+    #tib ClrDraw
+}
+
+function absolute(number n) {
+    #tib Abs({{n}})
+}
+
+function assembly(program name) {
+    #tib Asm({{name}})
+}
+
+function assemblyCompile(program input, program output) {
+    #tib AsmComp({{input}},{{output}})
+}
+
+function showAxes() {
+    #tib AxesOn
+}
+
+function hideAxes() {
+    #tib AxesOff
+}
+
+function dimension(n) {
+    #tib dim({{n}})
+}
+
+function parseInt(string str) {
+    #tib expr({{str}})
+}
+
+function expression(string str) {
+    #tib expr({{str}})
+}
+
+function for(number *iterator, number start, number end) {
+    #tib For({{iterator}},{{start}},{{end}})
+}
+
+function minimum(number first, number second) {
+    #tib min({{first}},{{second}})
+}
+
+function maximum(number first, number second) {
+    #tib max({{first}},{{second}})
+}
+
+function output(number y, number x, content) {
+    #tib Output({{y}},{{x}},{{content}})
+}
+
+function pixelSwitch(number y, number x) {
+    #tib Pxl-Change({{y}},{{x}})
+}
+
+function pixelChange(number y, number x) {
+    #tib Pxl-Change({{y}},{{x}})
+}
+
+function pixelOn(number y, number x) {
+    #tib Pxl-On({{y}},{{x}})
+}
+
+function pixelOff(number y, number x) {
+    #tib Pxl-Off({{y}},{{x}})
+}
+
+function pixelTest(number y, number x) {
+    #tib Pxl-Test({{y}},{{x}})
+}
+
+function randomInteger(number min, number max) {
+    #tib randInt({{min}},{{max}})
+}
+
+function randomIntegerNoRepeat(number min, number max) {
+    #tib randIntNoRep({{min}},{{max}})
+}
+
+function return() {
+    #tib Return
+}
+
+function sinus(number n) {
+    #tib sin({{n}})
+}
+
+function cosine(number n) {
+    #tib cos({{n}})
+}
+
+function tangent(number n) {
+    #tib tan({{n}})
+}
+
+function arcSinus(number n) {
+    #tib arcsin({{n}})
+}
+
+function arcCosine(number n) {
+    #tib arccos({{n}})
+}
+
+function arcTangent(number n) {
+    #tib arctan({{n}})
+}
+
+function exit() {
+    #tib Stop
+}
+
+function text(number y, number x, content) {
+    #tib Text({{y}},{{x}},{{content}})
+}
