@@ -1,0 +1,8 @@
+
+function input(text, name) {
+    #tib Input {{text}},{{name}}
+}
+
+function print(text) {
+    #tib Disp {{text}}
+}
