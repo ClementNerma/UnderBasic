@@ -128,6 +128,7 @@ var UnderBasic = new (function() {
         var notices = [];
 
         options = options || {};
+        options.files = options.files || {};
 
         var lines = code.split('\n'),
             match, line,
@@ -139,10 +140,17 @@ var UnderBasic = new (function() {
 
         var includedLibs = [];
 
-        code = code.replace(/#library( *)([a-zA-Z0-9_]+)/g, function(match, a, lib) {
+        code = code.replace(/(^|\n)#include( *)([a-zA-Z0-9_\-,\.]+)(\n|$)/g, function(match, a, b, file, c) {
+            if(!options.files.hasOwnProperty(file))
+                return '\n#&' + tr('Can\'t include file "{{file}}" : File not found', {file: file}) + '&#\n';
+
+            return a + files[file] + c;
+        });
+
+        code = code.replace(/(^|\n)#library( *)([a-zA-Z0-9_]+)(\n|$)/g, function(match, a, b, lib, c) {
             if(includedLibs.indexOf(lib) !== -1) {
                 notices.push('Library "{{lib}}" has been already loaded',{lib:lib});
-                return ''; // can't include two times a library !
+                return a || c; // can't include two times a library !
             }
 
             if(!libraries.hasOwnProperty(lib)) {
@@ -162,7 +170,7 @@ var UnderBasic = new (function() {
             }
 
             includedLibs.push(lib);
-            return libraries[lib];
+            return a + libraries[lib] + c;
         });
 
         for(var i = 0; i < lines.length; i += 1) {
@@ -187,9 +195,9 @@ var UnderBasic = new (function() {
         code  = code
             .replace(/(^|\n)function( *)([a-zA-Z0-9_]+)( *)\(([a-zA-Z0-9_, =\*\[\]"]*)\)( *){\n((.|\n)*?)\n}(\n|$)/g, function(match, a, b, name, c, argsS, d, content) {
 
-                name = options.localize ? (options.localizeCamelCase ? tr(name, 'functions').replace(/([a-z])([A-Z])/g, function(match, min, maj) {
+                name = options.localize ? (options.localizeCamelCase ? tr(name, {}, 'functions').replace(/([a-z])([A-Z])/g, function(match, min, maj) {
                     return min + '_' + maj.toLocaleLowerCase();
-                }) : tr(name, 'functions')) : name;
+                }) : tr(name, {}, 'functions')) : name;
 
                 if(functions.hasOwnProperty(name))
                     return '\n#&' + tr('Can\'t redeclare function "{{name}}"', {name:name}) + '&#\n';

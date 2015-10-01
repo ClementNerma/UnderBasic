@@ -12,6 +12,7 @@
     "Bad variable assignment : {{value}} is not a valid value": "Mauvais assignement de variable : {{value}} n'est pas une valeur valide",
     "Bad variable assignment : \"{{name}}\"'s type is {{varType}} but assigned value's type is {{valType}}": "Mauvais assignement de variable : \"{{name}}\" est de type {{varType}}, mais la valeur assignée est de type {{valType}}",
     "Compilation aborted": "La compilation a échouée",
+    "Can't include file \"{{file}}\" : File not found": "Impossible d'inclure le fichier \"{{file}}\" : Le fichier n'existe pas",
 
     "number": "nombre",
     "string": "chaine de caractères",
