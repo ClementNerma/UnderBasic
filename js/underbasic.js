@@ -2,7 +2,7 @@
 "use strict";
 
 var libErr = {
-    _: 'Failed to load library',
+    _  : 'Failed to load library',
     404: 'Library not found',
     403: 'Forbidden access for library file',
     500: 'Internal server error. Please try again in a few minutes'
@@ -15,11 +15,17 @@ var UnderBasic = new (function() {
 
     var _langs = {}, _lang = 'en';
 
-    this.translate = function(str) {
+    this.translate = function(str, parameters, obj) {
         if(!_langs.hasOwnProperty(_lang))
             return str;
 
-        return _langs[_lang][str] || str;
+        if(obj && !_langs[_lang].hasOwnProperty(obj))
+            return str;
+
+        return (!obj ? (_langs[_lang][str] || str) : (_langs[_lang][obj][str] || str))
+                .replace(/([^\\])\{\{(.*?)\}\}/g, function(match, pre, content) {
+                    return parameters.hasOwnProperty(content) ? pre + parameters[content] : pre + content;
+                });
     };
 
     this.translation = function(lang) {
@@ -62,6 +68,9 @@ var UnderBasic = new (function() {
         if(content.match(/^{(.*)}$/))
             return 'list';
 
+        if(content.match(/^\[([0-9,\[\]A-Z\*\+\-\/\.]+)\]$/))
+            return 'matrix';
+
     };
 
     this.variable = function(varname, extended, celtic3) {
@@ -72,11 +81,17 @@ var UnderBasic = new (function() {
         if(varname.match(/^[A-Z]$/))
             return 'number';
 
-        if(varname.match(/^List([A-Z]){1,6}$/))
+        if(varname.match(/^L([A-Z]){1,6}$/))
             return 'list';
+
+        if(varname.match(/^L([A-Z]){1,6}\[([A-Z0-9]+)\]$/))
+            return 'number';
 
         if(varname.match(/^\[([A-Z])\]$/))
             return 'matrix';
+
+        if(varname.match(/^\[([A-Z])\]\(([A-Z0-9]+),([A-Z0-9]+)\)$/))
+            return 'number';
 
         if(varname.match(/^Y[0-9]$/))
             return 'yvar';
@@ -107,9 +122,12 @@ var UnderBasic = new (function() {
 
     };
 
-    this.compile = function(code) {
+    this.compile = function(code, options) {
 
         var started = (new Date()).getTime();
+        var notices = [];
+
+        options = options || {};
 
         var lines = code.split('\n'),
             match, line,
@@ -119,7 +137,14 @@ var UnderBasic = new (function() {
             .replace(/([^\\])\/\*(.*)\*\//mg, '$1')
             .replace(/([^\\])\/\/(.*)$/mg, '$1');
 
+        var includedLibs = [];
+
         code = code.replace(/#library( *)([a-zA-Z0-9_]+)/g, function(match, a, lib) {
+            if(includedLibs.indexOf(lib) !== -1) {
+                notices.push('Library "{{lib}}" has been already loaded',{lib:lib});
+                return ''; // can't include two times a library !
+            }
+
             if(!libraries.hasOwnProperty(lib)) {
                 var req = $.ajax({
                     method: 'GET',
@@ -131,11 +156,12 @@ var UnderBasic = new (function() {
                 });
 
                 if(req.status !== 200)
-                    return '\n#&' + tr('Failed to load library') + ' "' + lib + '" : ' + tr(libErr[req.status]) + '&#\n';
+                    return '\n#&' + tr('Failed to load library "{{lib}}" : {{status}}', {lib:lib,status:libErr[req.status]}) + '&#\n';
 
                 libraries[lib] = req.responseText;
             }
 
+            includedLibs.push(lib);
             return libraries[lib];
         });
 
@@ -159,19 +185,23 @@ var UnderBasic = new (function() {
             });
 
         code  = code
-            .replace(/(^|\n)function( *)([a-zA-Z0-9_]+)( *)\(([a-zA-Z0-9_, \*]*)\)( *){\n((.|\n)*?)\n}(\n|$)/g, function(match, a, b, name, c, argsS, d, content) {
+            .replace(/(^|\n)function( *)([a-zA-Z0-9_]+)( *)\(([a-zA-Z0-9_, =\*\[\]"]*)\)( *){\n((.|\n)*?)\n}(\n|$)/g, function(match, a, b, name, c, argsS, d, content) {
+
+                name = options.localize ? (options.localizeCamelCase ? tr(name, 'functions').replace(/([a-z])([A-Z])/g, function(match, min, maj) {
+                    return min + '_' + maj.toLocaleLowerCase();
+                }) : tr(name, 'functions')) : name;
 
                 if(functions.hasOwnProperty(name))
-                    return '\n#&' + tr('Can\'t redeclare function') + ' "' + name + '"&#\n';
+                    return '\n#&' + tr('Can\'t redeclare function "{{name}}"', {name:name}) + '&#\n';
 
                 if(typeof functions[name] !== 'undefined')
-                    return '\n#&"' + name + '" ' + tr('is an object-reserved keyword') + '&#\n';
+                    return '\n#&' + tr('"{{name}}" is an object-reserved keyword', {name:name}) + '&#\n';
 
                 if(keyWords.indexOf(name) !== -1)
-                    return '\n#&"' + name + '" ' + tr('is a reserved keyword') + '&#\n';
+                    return '\n#&' + tr('"{{name}}" is a reserved keyword', {name:name}) + '&#\n';
 
                 if(UnderBasic.variable(name))
-                    return '\n#&"' + name + '" ' + tr('is a variable-reserved name') + '&#\n';
+                    return '\n#&' + tr('"{{name}}" is a variable-reserved name', {name:name}) + '&#\n';
 
                 var args = [], arg, m;
                 argsS = argsS.trim().match(/("[^"]+"|[^,]+)/g) || [];
@@ -179,12 +209,14 @@ var UnderBasic = new (function() {
                 for(var i = 0; i < argsS.length; i += 1) {
                     arg = argsS[i].trim();
 
-                    m = arg.match(/^(string|number|list|matrix|yvar|picture|GDB|program|appvar|group|application|)( *)(\*|)([a-zA-Z0-9_]+)$/);
+                    m = arg.match(/^(string|number|list|matrix|yvar|picture|GDB|program|appvar|group|application|)( *)(\*|)(\[|)([a-zA-Z0-9_]+)(\]|)( *)(=|)(.*?)$/);
 
                     args.push({
-                        type   : m[1] || false,
-                        pointer: m[3] || false,
-                        name   : m[4]
+                        type     : m[1] || false,
+                        pointer  : m[3] || false,
+                        optional : m[4] || false,
+                        name     : m[5],
+                        byDefault: m[8] ? m[9].trim() : false
                     });
 
                 }
@@ -197,40 +229,105 @@ var UnderBasic = new (function() {
                 return '';
             });
 
-        for(var i in functions) {
-            if(functions.hasOwnProperty(i)) {
-                code = code.replace(new RegExp('^' + i + '( ){1,}(.*?)$', 'mg'), function(match, a, argsS) {
-                        argsS = argsS.trim().match(/("[^"]+"|[^,]+)/g) || [];
+        var regExp, foundFunction = true;
 
-                        if(argsS.length !== functions[i].args.length)
-                            return '\n#&' + tr('Bad number of arguments for function') + ' ' + i + ' : ' + functions[i].args.length + ' ' + tr('required, but') + ' ' + argsS.length + ' ' + tr('specified') + '&#\n';
+        while(foundFunction) {
+            foundFunction = false;
 
-                        var args = {}, e;
+            for(var i in functions) {
+                if(functions.hasOwnProperty(i)) {
+                    regExp = new RegExp('^' + i + '( ){1,}(.*?)$', 'mg');
 
-                        for(var j = 0; j < functions[i].args.length; j += 1) {
-                            e = functions[i].args[j];
+                    code = code.replace(regExp, function(match, a, argsS) {
+                            var realArgs = [];
+                            argsS = argsS.trim().match(/("[^"]+"|[^,]+)/g) || [];
 
-                            if(!argsS[j])
-                                return '\n#&' + tr('Missing argument') + ' ' + e.name + ' ' + tr('for function') + ' ' + i;
+                            var args = {}, e;
 
-                            args[e.name] = argsS[j].replace(/([^"]+)|("(?:[^"\\]|\\.)+")/g, function($0, $1, $2) {
-                                return $1 ? $1.replace(/\s/g, '') : $2;
-                            });
+                            for(var j = 0; j < functions[i].args.length; j += 1) {
+                                e = functions[i].args[j];
 
-                            if(e.pointer && !UnderBasic.variable(args[e.name], true))
-                                return '\n#&' + tr('Invalid argument') + ' [' + i + ':' + e.name + '] : ' + tr('Must be a pointer') + '&#\n';
+                                if(!argsS[j]) {
+                                    if(!e.optional)
+                                        return '\n#&' + tr('Missing argument "{{name}}" for function "{{func}}"',{name:e.name,func:i}) + '&#\n';
 
-                            if(e.type && UnderBasic.type(args[e.name], true) !== e.type)
-                                return '\n#&' + tr('Invalid argument') + ' [' + i + ':' + e.name + '] : ' + tr('Must be a') + ' ' + tr(e.type) + ', ' + tr(UnderBasic.type(args[e.name], true) || 'unknown') + ' ' + tr('specified') + '&#\n';
-                        }
+                                    args[e.name] = e.byDefault || '';
+                                } else {
+                                    realArgs.push(e.name);
+                                    args[e.name] = argsS[j].replace(/([^"]+)|("(?:[^"\\]|\\.)+")/g, function($0, $1, $2) {
+                                        return $1 ? $1.replace(/\s/g, '') : $2;
+                                    });
 
-                        return functions[i].content.replace(/([^\\])\{\{([a-zA-Z0-9_]+)\}\}/g, function(match, pre, varname) {
-                            varname = varname.trim();
-                            return args[varname] ? pre + args[varname] : match;
-                        });
+                                    if(e.pointer && !UnderBasic.variable(args[e.name], true))
+                                        return '\n#&' + tr('Invalid argument [{{func}}:{{name}}] : Must be a pointer', {func:i,name:e.name}) + '&#\n';
+
+                                    if(e.type && UnderBasic.type(args[e.name], true) !== e.type)
+                                        return '\n#&' + tr('Invalid argument [{{func}}:{{name}}] : Must be a {{type}}, {{specified}} specified', {
+                                            func: i,
+                                            name: e.name,
+                                            type: tr(e.type),
+                                            specified: tr(UnderBasic.type(args[e.name], true) || 'unknown')
+                                        }) + '&#\n';
+                                    }
+                            }
+
+                            foundFunction = true;
+
+                            return functions[i]
+                                .content
+                                .replace(/(^|\n)#unquote( *)([a-zA-Z0-9_;]+)(\n|$)/g, function(match, a, b, names, c) {
+                                    names = names.split(';');
+
+                                    for(var i = 0; i < names.length; i += 1)
+                                        if(args[names[i]])
+                                            args[names[i]] = args[names[i]].replace(/^"(.*)"$/, '$1');
+
+                                    return a || c;
+                                })
+                                .replace(/(^|\n)#ifdef( *)([a-zA-Z0-9_]+)\n((.|\n)*?)\n#endif(\n|$)/g, function(match, a, b, name, content, c) {
+                                    c = c == '}' ? '' : c;
+                                    return (realArgs.indexOf(name) !== -1) ? a + content + c : a || c;
+                                })
+                                .replace(/(^|\n)#ifndef( *)([a-zA-Z0-9_]+)\n((.|\n)*?)\n#endifn(\n|$)/g, function(match, a, b, name, content, c) {
+                                    c = c == '}' ? '' : c;
+                                    return (realArgs.indexOf(name) === -1) ? a + content + c : a || c;
+                                })
+                                .replace(/([^\\])\{\{([a-zA-Z0-9_]+)\}\}/g, function(match, pre, varname) {
+                                    varname = varname.trim();
+                                    return args[varname] ? pre + args[varname] : match;
+                                });
                     });
+                }
             }
         }
+
+        // the next line ignore for exemple 'suite[i] = suite[i-2]+suite[i-1]' !!!
+        code = code.replace(/^([A-Z0-9\[\]\(\)]+)( *)=( *)(.*?)$/gm, function(match, varName, a, b, value) {
+            if(options.checkVariablesValidName)
+                if(!UnderBasic.variable(varName, true, true))
+                    return '\n#&' + tr('Bad variable name : "{{name}}"', {name:varName}) + '&#\n';
+
+            if(options.checkAssignments) {
+                var varType = varType ? tr(UnderBasic.variable(varName)) : undefined;
+                var valType = valType ? tr(UnderBasic.type(value, true, true)) : undefined;
+
+                if((varType && valType) || options.ignoreUndefinedAssignment) {
+                    if(!varType)
+                        return '\n#&' + tr('Bad variable assignment : "{{name}}" is not a valid variable name', {name:varName}) + '&#\n';
+
+                    if(!valType)
+                        return '\n#&' + tr('Bad variable assignment : {{value}} is not a valid value', {value:value}) + '&#\n';
+
+
+                    if(varType !== valType)
+                        return '\n#&' + tr('Bad variable assignment : "{{name}}"\'s type is {{varType}} but assigned value\'s type is {{valType}}', {name:varName,varType:varType,valType:valType}) + '&#\n';
+                } else if(!options.ignoreUndefinedAssignment) {
+                    notices.push('Assignment checker was enabled but an assignment was ignored : ' + (!varType ? 'variable' : 'value') + ' type is unknown');
+                }
+            }
+
+            return value + '->' + varName;
+        });
 
         var description = code.match(/(^|\n)#description( *)(.{1,16})(\n|$)/);
         var icon        = code.match(/(^|\n)#icon( *)([A-Z0-9]{16})(\n|$)/);
@@ -261,7 +358,8 @@ var UnderBasic = new (function() {
         return {
             content: err || code,
             duration: (new Date()).getTime() - started,
-            failed: !!err
+            failed: !!err,
+            notices: notices
         };
 
     };
