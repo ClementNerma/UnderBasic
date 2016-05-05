@@ -14,10 +14,6 @@ function filesClickEvent() {
     });
 }
 
-function escapeRegExp(str) {
-    return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
-}
-
 var localStorageSupport = (typeof localStorage !== 'undefined'),
     autoSaved,
     currentFile = 'main',
@@ -25,21 +21,26 @@ var localStorageSupport = (typeof localStorage !== 'undefined'),
         main: ''
     };
 
-var codeMirrorConfig = {
-    styleActiveLine: true,
-    lineNumbers: true,
-    indentUnit: 4
-};
-
 var underbasicConfig = {
     localize: true,
-    localizeCamelCase: true,
+    //localizeCamelCase: true,
     checkVariablesName: true,
     checkAssignments: true
 };
 
-var editor = CodeMirror($('#editor').get(0), codeMirrorConfig);
-var result = CodeMirror($('#result').get(0), codeMirrorConfig);
+var editor = CodeMirror($('#editor').get(0), {
+    styleActiveLine: true,
+    lineNumbers: true,
+    indentUnit: 2,
+    mode: 'python'
+});
+
+var result = CodeMirror($('#result').get(0), {
+    styleActiveLine: true,
+    lineNumbers: true,
+    indentUnit: 2,
+    mode: 'basic'
+});
 
 editor.on('change', function(codemirror, change) {
     var code = codemirror.getValue();
@@ -51,9 +52,11 @@ editor.on('change', function(codemirror, change) {
     }
 
     underbasicConfig.files = files;
-    var comp = UnderBasic.compile(code, underbasicConfig);
+    var comp = UnderBasic.compile(code, underbasicConfig), mode = comp.failed ? 'text' : 'basic';
     $('#result').css('border-color', comp.failed ? 'red' : 'lightgray');
+    if(result.options.mode !== mode) result.setOption('mode', mode);
     result.setValue(comp.content);
+    window.comp = comp;
 });
 
 if(localStorageSupport && (autoSaved = localStorage.getItem('__underbasic_autosave'))) {
@@ -65,12 +68,6 @@ if(localStorageSupport && (autoSaved = localStorage.getItem('__underbasic_autosa
 
         if(conf = localStorage.getItem('__underbasic_config'))
             underbasicConfig = JSON.parse(conf);
-
-        for(var i in files)
-            if(files.hasOwnProperty(i))
-                $('#files').append($(document.createElement('div')).text(i).attr('name', i).addClass('file').addClass(currentFile === i ? 'active' : ''));
-
-        editor.setValue(files[currentFile]);
         console.info('Auto-saved content has been restored, current file is "' + currentFile + '"');
     }
 
@@ -80,6 +77,12 @@ if(localStorageSupport && (autoSaved = localStorage.getItem('__underbasic_autosa
         localStorage.removeItem('__underbasic_current_file');
         window.location.reload();
     }
+
+    for(var i in files)
+        if(files.hasOwnProperty(i))
+            $('#files').append($(document.createElement('div')).text(i).attr('name', i).addClass('file').addClass(currentFile === i ? 'active' : ''));
+
+    editor.setValue(files[currentFile]);
 } else {
     if(localStorageSupport) {
         try {

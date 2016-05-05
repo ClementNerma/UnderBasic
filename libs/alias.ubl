@@ -1,142 +1,197 @@
 
-answer : Ans
+#alias answer : Ans
 
-function input(string text, string *name) {
-    \Input {{text}},{{name}}
+function input(string text, string* name) {
+  \Input text,${name}
 }
 
-function echo(text) {
-    \Disp {{text}}
+function echo(mixed text) {
+  \Disp text
 }
 
-function display(text) {
-    \Disp {{text}}
+function display(mixed text) {
+  \Disp text
 }
 
-function print(text) {
-    \Disp {{text}}
+function print(mixed text) {
+  \Disp text
 }
 
 function clear() {
-    \ClrHome
+  \ClrHome
 }
 
 function clearHome() {
-    \ClrHome
+  \ClrHome
 }
 
 function clearDraw() {
-    \ClrDraw
+  \ClrDraw
 }
 
 function absolute(number n) {
-    \Abs({{n}})
+  \Abs(n)
 }
 
 function assembly(program name) {
-    \Asm({{name}})
+  \Asm(name)
 }
 
 function assemblyCompile(program input, program output) {
-    \AsmComp({{input}},{{output}})
+  \AsmComp(input,output)
 }
 
 function showAxes() {
-    \AxesOn
+  \AxesOn
 }
 
 function hideAxes() {
-    \AxesOff
+  \AxesOff
 }
 
 function dimension(n) {
-    \dim({{n}})
+  \dim(n)
 }
 
 function parseInt(string str) {
-    \expr({{str}})
+  \expr(str)
 }
 
 function expression(string str) {
-    \expr({{str}})
-}
-
-function for(number *iterator, number start, number end) {
-    \For({{iterator}},{{start}},{{end}})
+  \expr(str)
 }
 
 function minimum(number first, number second) {
-    \min({{first}},{{second}})
+  \min(first,second)
 }
 
 function maximum(number first, number second) {
-    \max({{first}},{{second}})
+  \max(first,second)
 }
 
 function output(number y, number x, content) {
-    \Output({{y}},{{x}},{{content}})
+  \Output(y,x,content)
 }
 
 function pixelSwitch(number y, number x) {
-    \Pxl-Change({{y}},{{x}})
+  \Pxl-Change(y,x)
 }
 
 function pixelChange(number y, number x) {
-    \Pxl-Change({{y}},{{x}})
+  \Pxl-Change(y,x)
 }
 
 function pixelOn(number y, number x) {
-    \Pxl-On({{y}},{{x}})
+  \Pxl-On(y,x)
 }
 
 function pixelOff(number y, number x) {
-    \Pxl-Off({{y}},{{x}})
+  \Pxl-Off(y,x)
 }
 
 function pixelTest(number y, number x) {
-    \Pxl-Test({{y}},{{x}})
+  \Pxl-Test(y,x)
 }
 
 function randomInteger(number min, number max) {
-    \randInt({{min}},{{max}})
+  \randInt(min,max)
 }
 
 function randomIntegerNoRepeat(number min, number max) {
-    \randIntNoRep({{min}},{{max}})
+  \randIntNoRep(min,max)
 }
 
-function return() {
-    \Return
+function Return() {
+  \Return
 }
 
 function sinus(number n) {
-    \sin({{n}})
+  \sin(n)
 }
 
 function cosine(number n) {
-    \cos({{n}})
+  \cos(n)
 }
 
 function tangent(number n) {
-    \tan({{n}})
+  \tan(n)
 }
 
 function arcSinus(number n) {
-    \arcsin({{n}})
+  \arcsin(n)
 }
 
 function arcCosine(number n) {
-    \arccos({{n}})
+  \arccos(n)
 }
 
 function arcTangent(number n) {
-    \arctan({{n}})
+  \arctan(n)
 }
 
 function exit() {
-    \Stop
+  \Stop
 }
 
 function text(number y, number x, content) {
-    \Text({{y}},{{x}},{{content}})
+  \Text(y,x,content)
+}
+
+function sub(string str, number start, number length) {
+  \sub(str,start,length)
+}
+
+function length(string str) {
+  \length(str)
+}
+
+function listLength(list lst) {
+  \dim(lst)
+}
+
+function squareLength(matrix mtx) {
+  \dim(mtx)[0]*dim(mtx[1])
+}
+
+block for(number* iterator, number start, number end) {
+  \For(iterator,start,end)
+  ${_CONTENT_}
+  \End
+}
+
+/* Special loops */
+
+// Loops maker util
+function _block(unref_mixed name, unref_mixed condition) {
+  #script
+  args.condition = args.condition.replace(/([^"]+)|("(?:[^"\\]|\\.)+")/g, function($0, $1, $2) {;
+    return $1 ? $1
+      .replace(/\bis\b/g, '=')
+      .replace(/\bisnt\b/g, '!=')
+      .replace(/\bnot\b/g, '!')
+      .replace(/\bhigher\b/g, '>')
+      .replace(/\blower\b/g, '<')
+      .replace(/\bequals\b/g, '=') : $2;
+  });
+
+  args.condition = args.condition.replace(/([^"]+)|("(?:[^"\\]|\\.)+")/g, function($0, $1, $2) {;
+    return $1 ? $1.replace(/ +(=|\!=|>|<|>=|<=) +/g, '$1') : $2;
+  });
+  #endscript
+
+  \name condition
+}
+
+// Loops themselves
+
+block while(unref_mixed condition) {
+  _block(While, condition)
+  ${_CONTENT_}
+  \End
+}
+
+block repeat(unref_mixed condition) {
+  _block(Repeat, condition)
+  ${_CONTENT_}
+  \End
 }

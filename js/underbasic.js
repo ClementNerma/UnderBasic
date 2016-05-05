@@ -1,33 +1,67 @@
 
 "use strict";
 
+/**
+  * Escape a regex
+  * @param {string} str
+  * @return {string}
+  */
+function escapeRegExp(str) {
+    return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+}
+
 var libErr = {
     _  : 'Failed to load library',
     404: 'Library not found',
-    403: 'Forbidden access for library file',
+    403: 'Forbidden access to library file',
     500: 'Internal server error. Please try again in a few minutes'
 };
 
 var libraries = {};
-var keyWords = ['function'];
+var keyWords = ['function', 'ret'];
 
+/**
+  * UnderBasic compiler
+  * @type {function}
+  */
 var UnderBasic = new (function() {
 
     var _langs = {}, _lang = 'en';
 
-    this.translate = function(str, parameters, obj) {
-        if(!_langs.hasOwnProperty(_lang))
-            return str;
+    /**
+      * Translate a message
+      * @param {string} str
+      * @param {object} values
+      * @param {object} [obj] String sub-object location
+      */
+    this.translate = function(str, values, obj) {
+      var i  = -1; values = values || {};
 
-        if(obj && !_langs[_lang].hasOwnProperty(obj))
-            return str;
+      if(!_langs.hasOwnProperty(_lang))
+        return str;
 
-        return (!obj ? (_langs[_lang][str] || str) : (_langs[_lang][obj][str] || str))
-                .replace(/([^\\])\{\{(.*?)\}\}/g, function(match, pre, content) {
-                    return parameters.hasOwnProperty(content) ? pre + parameters[content] : pre + content;
-                });
+      if(obj && !_langs[_lang].hasOwnProperty(obj))
+        return str;
+
+      return (!obj ? (_langs[_lang][str] || str || '') : (_langs[_lang][obj][str] || str || ''))
+        .replace(/\$\{(.*?)\}/g, function(match, content) {
+          //return parameters.hasOwnProperty(content) ? pre + parameters[content] : pre + content;
+
+          if(!Array.isArray(values)) {
+            if(values.hasOwnProperty(content))
+              return values[content];
+          } else if(values.length > ++i)
+            return values[i];
+          else
+            return match;
+        });
     };
 
+    /**
+      * Load a translation package
+      * @param {string} lang
+      * @return {boolean} True if success
+      */
     this.translation = function(lang) {
         if(!_langs.hasOwnProperty(lang)) {
             var req = $.ajax({
@@ -52,6 +86,13 @@ var UnderBasic = new (function() {
         return true;
     }
 
+    /**
+      * Get type of a content
+      * @param {string} content
+      * @param {boolean} [extended] Includes programs + Celtic3 types
+      * @param {boolean} [celtic3] Includes AppVar + Groups + Applications
+      * @return {string}
+      */
     this.type = function(content, extended, celtic3) {
 
         var v = this.variable(content, extended, celtic3);
@@ -59,7 +100,7 @@ var UnderBasic = new (function() {
         if(v)
             return v;
 
-        if(content.match(/^([0-9\.\+\-\*\/\(\)\!]+)$/))
+        if(content.match(/^([0-9\.\+\-\*\/\(\)\!\[\]A-Z]+)$/))
             return 'number';
 
         if(content.match(/^"(.*)"$/))
@@ -70,9 +111,15 @@ var UnderBasic = new (function() {
 
         if(content.match(/^\[([0-9,\[\]A-Z\*\+\-\/\.]+)\]$/))
             return 'matrix';
-
     };
 
+    /**
+      * Get type of a variable using its name
+      * @param {string} varname Name of the variable
+      * @param {boolean} [extended] Includes programs + Celtic3 types
+      * @param {boolean} [celtic3] Includes AppVar + Groups + Applications
+      * @return {string}
+      */
     this.variable = function(varname, extended, celtic3) {
 
         if(varname.match(/^Str([0-9])$/))
@@ -122,39 +169,189 @@ var UnderBasic = new (function() {
 
     };
 
+    /**
+      * Compile an UnderBasic code to TI-Basic z80 code
+      * @param {string} code
+      * @param {object} [options]
+      * @return {object}
+      */
     this.compile = function(code, options) {
 
+        /**
+          * Throw an error
+          * @param {string} err
+          * @return {string} To use in .replace()
+          */
+        function error(err) {
+          // Here, content gives 'undefined'
+          errors.push({ message: err, line : lineIndex - substractErrorLine, content: line /*lines[lineIndex].trim()*/, file: file });
+          return '';
+        }
+
+        /**
+          * Format a string with vars and filters
+          * @param {string} input
+          * @param {object} vars
+          * @return {string} output
+          */
+        function format(input, vars) {
+          // support of explicit variables calls
+          // ex: ${name}
+          input = input.replace(/\${ *([a-zA-Z0-9_]+) *}/g, function(match, name) {
+            if(!vars.hasOwnProperty(name)) {
+              return error(tr('Variable "${name}" is not defined', [name]));
+            } else
+              return vars[name];
+          });
+
+          // support of explicit variables calls with filter
+          // ex: ${name|unquote}
+          // LIST of filters : unquote, uppercase, lowercase, ucfirst, lcfirst
+          input = input.replace(/\${ *([a-zA-Z0-9_]+) *\| *([a-zA-Z0-9_]+) *}/g, function(match, name, filter) {
+            if(!vars.hasOwnProperty(name))
+              return error(tr('Argument "${name}" is not defined', [name]));
+            else if(filter === 'unquote') {
+              if(vars[name].substr(0, 1) !== '"' || vars[name].substr(-1) !== '"')
+                error(tr('Failed to apply filter "unquote" : Variable "${name}" is not quoted', [name]));
+              else
+                return vars[name].substr(1, vars[name].length - 2);
+            } else if(filter === 'uppercase')
+              return vars[name].toLocaleUpperCase();
+            else if(filter === 'lowercase')
+              return vars[name].toLocaleLowerCase();
+            else if(filter === 'ucfirst')
+              return vars[name].substr(0, 1).toLocaleUpperCase() + vars[name].substr(1);
+            else if(filter === 'lcfirst')
+              return vars[name].substr(0, 1).toLocaleLowerCase() + vars[name].substr(1);
+            else
+              error(tr('Filter "${filter}" doesn\'t exist', [filter]));
+          });
+
+          // Make #define effects in the code
+          // : Replace all string aliases
+          // ex: "Hello ${name}"
+          var aliases = Object.keys(vars);
+
+          for(l = 0; l < aliases.length; l++) {
+            //code = code.replace(new RegExp('([^{\\\\]){' + escapeRegExp(i) + '}', 'g'), '$1' + alias[i]);
+            input = input.replace(new RegExp('("[^"]*"|\'[^\']*\')|\\b' + escapeRegExp(aliases[l]) + '\\b', 'g'), function(match, name) {
+              return (name === undefined ? vars[aliases[l]] : name);
+            });
+          }
+
+          return input;
+        }
+
         var started = (new Date()).getTime();
-        var notices = [];
-
-        options = options || {};
-        options.files = options.files || {};
-
-        var lines = code.split('\n'),
-            match, line,
-            alias = {}, functions = {};
-
-        code = code
-            .replace(/([^\\])\/\*(.*)\*\//mg, '$1')
-            .replace(/([^\\])\/\/(.*)$/mg, '$1');
-
+        var notices = [], errors = [];
+        // List of libs included by the code
         var includedLibs = [];
 
-        code = code.replace(/(^|\n)#include( *)([a-zA-Z0-9_\-,\.]+)(\n|$)/g, function(match, a, b, file, c) {
-            if(!options.files.hasOwnProperty(file))
-                return '\n#&' + tr('Can\'t include file "{{file}}" : File not found', {file: file}) + '&#\n';
+        options = options || {};
 
-            return a + files[file] + c;
-        });
+        // Support of multiple lines comments
+        code = code.replace(/###((.|\n)*?)###/g, '').replace(/\/\*((.|\n)*?)\*\//g, '');
+        // Prevent code from JS injection
+        code = code.replace(/(^|\n) *#script *\n((.|\n)*?) *#endscript *(\n|$)/g, '$1$3');
 
-        code = code.replace(/(^|\n)#library( *)([a-zA-Z0-9_]+)(\n|$)/g, function(match, a, b, lib, c) {
-            if(includedLibs.indexOf(lib) !== -1) {
-                notices.push('Library "{{lib}}" has been already loaded',{lib:lib});
-                return a || c; // can't include two times a library !
-            }
+        var lines = code.split('\n'), lineIndex, funcnames, define, ret, e, varName, value, varType, accLevel = 0,
+            match, line, req, action, lib, $1, returnVar, block, regExp1, regExp2, aliases, valType, substractErrorLine = 0,
+            alias = {}, functions = {}, tempVars = {}, out = [], syntaxError, realArgs, k, l, tmp, checkFunctions,
+            type, name, argsS, ob_buffer = [], args, arg, m, j, file = 'program', put, arg_name, arg_word;
 
-            if(!libraries.hasOwnProperty(lib)) {
-                var req = $.ajax({
+        for(var i = 0; i < lines.length; i++) {
+          lineIndex = i;
+          line = lines[i];
+          // Support of comments
+          //  /* ... */
+          //  // ...
+          //  #  ...
+          line = line
+            .replace(/\/\*(.*?)\*\//, '')
+            .replace(/\/\/(.*?)$/, '')
+            .replace(/# (.*?)$/, '')
+            .trim();
+
+          if(!line) continue ;
+
+          if(line.substr(0, 1) === '\\') {
+            if(ob_buffer)
+              ob_buffer.push(line);
+            else
+              out.push(line.substr(1));
+
+            continue ;
+          }
+
+          if(action !== 'DEFINE_FUNCTION' && action !== 'CALL_BLOCK' && line.substr(0, 1) !== '#')
+            line = format(line, alias);
+
+          if(line.substr(-1) === '{')
+            accLevel += 1;
+
+          if(line === '}') {
+            if(accLevel) accLevel -= 1;
+            if(accLevel) { ob_buffer.push('}'); continue ; };
+
+            if(!action)
+              error(tr('Syntax error : No closing bracket is needed here'));
+            else if(action === 'DEFINE_FUNCTION') {
+              // Reference the function
+              functions[define.name] = {
+                  args   : define.args,
+                  content: ob_buffer.join('\n'),
+                  block  : (define.type === 'block')
+              };
+
+              ob_buffer = null; action = null; define = null;
+            } else if(action === 'CALL_BLOCK') {
+              define.args._CONTENT_ = ob_buffer.join('\n');
+              lines.splice.apply(lines, [i + 1, 0].concat(format(define.ret, define.args).split('\n')));
+
+              ob_buffer = null; action = null; define = null;
+            } else
+              error('Compiler error : Unknown closing action "${action}"', [action]);
+
+            continue ;
+          }
+
+          if(action === 'DEFINE_FUNCTION' || action === 'CALL_BLOCK') {
+            ob_buffer.push(line);
+            continue ;
+          }
+
+          checkFunctions = false;
+
+          // Support of lists indexes
+          line = line.replace(/([^a-zA-Z])L([A-Z]+)\[(.+?)\]/g, '$1L$2($3)');
+          // Support of matrix indexes
+          line = line.replace(/\[([A-Z])\]\[(.+?),(.+?)\]/g, '[$1]($2,$3)');
+
+          // support of functions call with parenthesis
+          if(match = line.match(/^([a-zA-Z0-9_]+) *\( *(.*) *\) *(|{)$/)) {
+            if(keyWords.indexOf(match[1].toLocaleLowerCase()) === -1)
+              line = match[1] + ' ' + match[2] + (match[3] || '');
+          }
+
+          // #include directive
+          if(match = line.match(/^(#|)include *([a-zA-Z0-9_\-,\.]+)$/)) {
+            file = match[2];
+
+            if(!options.files || !options.files.hasOwnProperty(file))
+              error(tr('Can\'t include file "${file}" : File not found', [file]));
+            else
+              lines.splice.apply(lines, [i + 1, 0].concat(['#file ' + file]).concat(((!options.preventJavaScriptFromIncludeFiles || !options.preventJavaScript) ? files[file] : files[file].replace(/(^|\n) *#script *\n((.|\n)*?) *#endscript *(\n|$)/g, '$1$3')).split('\n')).concat(['#endfile']));
+          } else
+          // #library directive
+          if(match = line.match(/^(#|)(library|import) *([a-zA-Z0-9\-_]+)$/)) {
+            lib = match[3];
+            // If library has already been included
+            if(includedLibs.indexOf(lib) !== -1)
+              notices.push('Library "' + lib + '" has been already loaded');
+            else {
+              // Else, download it
+              if(!libraries.hasOwnProperty(lib)) {
+                req = $.ajax({
                     method: 'GET',
                     cache: false,
                     url: 'libs/' + lib + '.ubl',
@@ -163,214 +360,298 @@ var UnderBasic = new (function() {
                     async: false
                 });
 
+                // If fail to fetch server
                 if(req.status !== 200)
-                    return '\n#&' + tr('Failed to load library "{{lib}}" : {{status}}', {lib:lib,status:libErr[req.status]}) + '&#\n';
+                    error(tr('Failed to load library "${lib}" : ${status}', [lib, tr(libErr[req.status])]));
+                else
+                  // Save the library
+                  libraries[lib] = req.responseText;
+              }
 
-                libraries[lib] = req.responseText;
+              if(libraries[lib]) {
+                // Append to the main code
+                lines.splice.apply(lines, [i + 1, 0].concat(['#file library.' + lib]).concat(libraries[lib].split('\n').concat(['#endfile'])));
+                // Reference the library as used
+                includedLibs.push(lib);
+              }
             }
+          } else
+          // function or block declaration
+          if(match = line.match(/^(function|block) *([a-zA-Z0-9_]+) *\(([a-zA-Z0-9_, =\*\[\]"]*)\) *{$/)) {
+            type = match[1]; name = match[2]; argsS = match[3];
 
-            includedLibs.push(lib);
-            return a + libraries[lib] + c;
-        });
+            /*name = options.localize ? (options.localizeCamelCase ? tr(name, {}, 'functions').replace(/([a-z])([A-Z])/g, function(match, min, maj) {
+              return min + '_' + maj.toLocaleLowerCase();
+            }) : tr(name, {}, 'functions')) : name;*/
+            name = options.localize ? tr(name, {}, 'functions') : name;
 
-        for(var i = 0; i < lines.length; i += 1) {
-            line = lines[i];
+            if(functions.hasOwnProperty(name))
+              error(tr('Can\'t redeclare function "${name}"', [name]));
+            else if(typeof functions[name] !== 'undefined')
+              error(tr('"${name}" is an object-reserved keyword', [name]));
+            else if(keyWords.indexOf(name) !== -1)
+              error(tr('"${name}" is a reserved keyword', [name]));
+            else if(UnderBasic.variable(name))
+              error(tr('"${name}" is a variable-reserved name', [name]));
+            else {
+              args = []; argsS = argsS.trim().match(/("[^"]+"|[^,]+)/g) || [];
+              // For each argument...
+              for(j = 0; j < argsS.length; j += 1) {
+                arg = argsS[j].trim(); put = [];
 
-            if(match = line.match(/^(#def|#define|#alias|)( *)([a-zA-Z0-9_]+)( *):( *)([a-zA-Z0-9_]+)$/)) {
-                alias[match[3]] = match[6];
-                code = code.replace(new RegExp('(\\b)' + escapeRegExp(match[3]) + '(\\b)', 'g'), match[6]);
-            }
-        }
-
-        code = code
-            .replace(/^(.*)$/mg, function(match, content) { return content.trim(); })
-            .replace(/^(#def|#define|#alias|)( *)([a-zA-Z0-9_]+)( *):( *)([a-zA-Z0-9_]+)$/mg, '')
-            .replace(/^([a-zA-Z0-9]+)( *)\(( *)(.*)( *)\)$/mg, function(match, func, a, b, args) {
-                if(keyWords.indexOf(func.toLocaleLowerCase()) !== -1)
-                    return match;
-
-                return func + ' ' + args;
-            });
-
-        code  = code
-            .replace(/(^|\n)function( *)([a-zA-Z0-9_]+)( *)\(([a-zA-Z0-9_, =\*\[\]"]*)\)( *){\n((.|\n)*?)\n}(\n|$)/g, function(match, a, b, name, c, argsS, d, content) {
-
-                name = options.localize ? (options.localizeCamelCase ? tr(name, {}, 'functions').replace(/([a-z])([A-Z])/g, function(match, min, maj) {
-                    return min + '_' + maj.toLocaleLowerCase();
-                }) : tr(name, {}, 'functions')) : name;
-
-                if(functions.hasOwnProperty(name))
-                    return '\n#&' + tr('Can\'t redeclare function "{{name}}"', {name:name}) + '&#\n';
-
-                if(typeof functions[name] !== 'undefined')
-                    return '\n#&' + tr('"{{name}}" is an object-reserved keyword', {name:name}) + '&#\n';
-
-                if(keyWords.indexOf(name) !== -1)
-                    return '\n#&' + tr('"{{name}}" is a reserved keyword', {name:name}) + '&#\n';
-
-                if(UnderBasic.variable(name))
-                    return '\n#&' + tr('"{{name}}" is a variable-reserved name', {name:name}) + '&#\n';
-
-                var args = [], arg, m;
-                argsS = argsS.trim().match(/("[^"]+"|[^,]+)/g) || [];
-
-                for(var i = 0; i < argsS.length; i += 1) {
-                    arg = argsS[i].trim();
-
-                    m = arg.match(/^(string|number|list|matrix|yvar|picture|GDB|program|appvar|group|application|)( *)(\*|)(\[|)([a-zA-Z0-9_]+)(\]|)( *)(=|)(.*?)$/);
-
-                    args.push({
-                        type     : m[1] || false,
-                        pointer  : m[3] || false,
-                        optional : m[4] || false,
-                        name     : m[5],
-                        byDefault: m[8] ? m[9].trim() : false
-                    });
-
+                if(arg.indexOf(' ') === -1) {
+                  args.push({ type: 'unref_mixed', pointer: false, optionnal: false, name: arg });
+                  continue ;
                 }
 
-                functions[name] = {
-                    args: args,
-                    content: content.trim()
-                };
+                arg_word = arg.split(' ')[0];
+                arg_name = arg.split(' ')[1];
 
-                return '';
+                if(arg_word.substr(-1) === '*') {
+                  put.pointer = true;
+                  put.type    = arg_word.substr(0, arg_word.length - 1);
+                } else
+                  put.type    = arg_word;
+
+                if((arg_name.substr(0, 1) === '[' ? 1 : 0) + (arg_name.substr(-1) === ']' ? 1 : 0) === 1)
+                  error(tr('Bad function declaration : argument ${index} is defined as optionnal argument but missing closing bracket', [j + 1]));
+
+                if(arg_name.substr(0, 1) === '[') {
+                  put.optionnal = true;
+                  put.name      = arg_name.substr(1, arg_name.length - 2);
+                } else
+                  put.name      = arg_name;
+
+                if(arg.indexOf('=') !== -1) {
+                  if(!arg.substr(arg.indexOf('=') + 1).trim().length)
+                    error(tr('Bad function declaration : argument ${index} has "=" operator but no default value was specified', [j + 1]));
+
+                  put.byDefault = arg.substr(arg.indexOf('=') + 1).trim();
+                }
+
+                if((['string', 'number', 'list', 'matrix', 'yvar', 'picture', 'GDB', 'program', 'appvar', 'group', 'application', 'mixed', 'unref_mixed']).indexOf(put.type) === -1)
+                  error(tr('Bad function declaration : argument ${index} is declared as WRONG type `${type}`', [j + 1, put.type]))
+
+                args.push(put);
+              }
+
+              ob_buffer = [];
+              define    = { name: name, args: args, type: type };
+              action    = 'DEFINE_FUNCTION';
+            }
+          } else
+          // #define, #def, #alias directives
+          if(match = line.match(/^(#def|#define|#alias|) *([a-zA-Z0-9_]+) *: *(.+)$/)) {
+            if(keyWords.indexOf(match[1]) !== -1)
+              return error(tr('Alias "${name}" mustn\'t be a reserved keyword', [match[2]]));
+
+            if(UnderBasic.type(match[2], true, true))
+              return error(tr('Alias "${name}" mustn\'t be variable name or a plain value', [match[2]]));
+
+            if(functions.hasOwnProperty(match[2]))
+              return error(tr('Alias "${name}" mustn\'t be a function name', [match[2]]));
+
+            alias[match[2]] = match[3];
+          } else
+          // #file directive marker
+          if(match = line.match(/^#file +([a-zA-Z0-9_ \.:\\\/\-]+)$/)) {
+            file = match[1]; substractErrorLine = i - 1;
+          } else
+          // #endfile directive marker
+          if(line === '#endfile') {
+            file = 'program'; substractErrorLine = i;
+          } else
+          // variables assignement using a function
+          if(match = line.match(/^([A-Za-z0-9\[\]\(\)]+) *= *([a-zA-Z0-9_]+) *\( *(.*) *\)$/)) {
+            checkFunctions = true;
+            line = match[2] + ' ' + match[3] + '|->' + match[1];
+          } else
+          // variables assignement
+          if(match = line.match(/^([A-Za-z0-9\[\]\(\)]+) *= *(.*?)$/)) {
+            varName = match[1]; value = match[2].replace(/([^"]+)|("(?:[^"\\]|\\.)+")/g, function($0, $1, $2) {
+              return $1 ? $1.replace(/\s/g, '') : $2;
             });
 
-        var regExp, foundFunction = true;
-
-        while(foundFunction) {
-            foundFunction = false;
-
-            for(var i in functions) {
-                if(functions.hasOwnProperty(i)) {
-                    regExp = new RegExp('^' + i + '( ){1,}(.*?)$', 'mg');
-
-                    code = code.replace(regExp, function(match, a, argsS) {
-                            var realArgs = [];
-                            argsS = argsS.trim().match(/("[^"]+"|[^,]+)/g) || [];
-
-                            var args = {}, e;
-
-                            for(var j = 0; j < functions[i].args.length; j += 1) {
-                                e = functions[i].args[j];
-
-                                if(!argsS[j]) {
-                                    if(!e.optional)
-                                        return '\n#&' + tr('Missing argument "{{name}}" for function "{{func}}"',{name:e.name,func:i}) + '&#\n';
-
-                                    args[e.name] = e.byDefault || '';
-                                } else {
-                                    realArgs.push(e.name);
-                                    args[e.name] = argsS[j].replace(/([^"]+)|("(?:[^"\\]|\\.)+")/g, function($0, $1, $2) {
-                                        return $1 ? $1.replace(/\s/g, '') : $2;
-                                    });
-
-                                    if(e.pointer && !UnderBasic.variable(args[e.name], true))
-                                        return '\n#&' + tr('Invalid argument [{{func}}:{{name}}] : Must be a pointer', {func:i,name:e.name}) + '&#\n';
-
-                                    if(e.type && UnderBasic.type(args[e.name], true) !== e.type)
-                                        return '\n#&' + tr('Invalid argument [{{func}}:{{name}}] : Must be a {{type}}, {{specified}} specified', {
-                                            func: i,
-                                            name: e.name,
-                                            type: tr(e.type),
-                                            specified: tr(UnderBasic.type(args[e.name], true) || 'unknown')
-                                        }) + '&#\n';
-                                    }
-                            }
-
-                            foundFunction = true;
-
-                            return functions[i]
-                                .content
-                                .replace(/(^|\n)#unquote( *)([a-zA-Z0-9_;]+)(\n|$)/g, function(match, a, b, names, c) {
-                                    names = names.split(';');
-
-                                    for(var i = 0; i < names.length; i += 1)
-                                        if(args[names[i]])
-                                            args[names[i]] = args[names[i]].replace(/^"(.*)"$/, '$1');
-
-                                    return a || c;
-                                })
-                                .replace(/(^|\n)#ifdef( *)([a-zA-Z0-9_]+)\n((.|\n)*?)\n#endif(\n|$)/g, function(match, a, b, name, content, c) {
-                                    c = c == '}' ? '' : c;
-                                    return (realArgs.indexOf(name) !== -1) ? a + content + c : a || c;
-                                })
-                                .replace(/(^|\n)#ifndef( *)([a-zA-Z0-9_]+)\n((.|\n)*?)\n#endifn(\n|$)/g, function(match, a, b, name, content, c) {
-                                    c = c == '}' ? '' : c;
-                                    return (realArgs.indexOf(name) === -1) ? a + content + c : a || c;
-                                })
-                                .replace(/([^\\])\{\{([a-zA-Z0-9_]+)\}\}/g, function(match, pre, varname) {
-                                    varname = varname.trim();
-                                    return args[varname] ? pre + args[varname] : match;
-                                });
-                    });
-                }
-            }
-        }
-
-        // the next line ignore for exemple 'suite[i] = suite[i-2]+suite[i-1]' !!!
-        code = code.replace(/^([A-Z0-9\[\]\(\)]+)( *)=( *)(.*?)$/gm, function(match, varName, a, b, value) {
             if(options.checkVariablesValidName)
-                if(!UnderBasic.variable(varName, true, true))
-                    return '\n#&' + tr('Bad variable name : "{{name}}"', {name:varName}) + '&#\n';
+              if(!UnderBasic.variable(varName, true, true))
+                return error(tr('Bad variable name : "${name}"', {name:varName}));
 
             if(options.checkAssignments) {
-                var varType = varType ? tr(UnderBasic.variable(varName)) : undefined;
-                var valType = valType ? tr(UnderBasic.type(value, true, true)) : undefined;
+              varType = tr(UnderBasic.variable(varName));
+              valType = tr(UnderBasic.type(value, true, true));
 
-                if((varType && valType) || options.ignoreUndefinedAssignment) {
-                    if(!varType)
-                        return '\n#&' + tr('Bad variable assignment : "{{name}}" is not a valid variable name', {name:varName}) + '&#\n';
-
-                    if(!valType)
-                        return '\n#&' + tr('Bad variable assignment : {{value}} is not a valid value', {value:value}) + '&#\n';
-
-
-                    if(varType !== valType)
-                        return '\n#&' + tr('Bad variable assignment : "{{name}}"\'s type is {{varType}} but assigned value\'s type is {{valType}}', {name:varName,varType:varType,valType:valType}) + '&#\n';
-                } else if(!options.ignoreUndefinedAssignment) {
-                    notices.push('Assignment checker was enabled but an assignment was ignored : ' + (!varType ? 'variable' : 'value') + ' type is unknown');
-                }
+              if((varType && valType) || !options.ignoreUndefinedAssignment) {
+                if(!varType)
+                  error(tr('Bad variable assignment : "${name}" is not a valid variable name', {name:varName}));
+                else if(!valType)
+                  error(tr('Bad variable assignment : ${value} is not a valid value', {value:value}));
+                else if(varType !== valType)
+                  error(tr('Bad variable assignment : "${name}"\'s type is ${varType} but assigned value\'s type is ${valType}', {name:varName,varType:varType,valType:valType}));
+              } else if(!options.ignoreUndefinedAssignment)
+                notices.push('Assignment checker was enabled but an assignment was ignored : ' + (!varType ? 'variable' : 'value') + ' type is unknown');
             }
 
-            return value + '->' + varName;
-        });
+            (ob_buffer || out).push(value + '->' + varName);
+          } else
+            checkFunctions = true;
 
-        var description = code.match(/(^|\n)#description( *)(.{1,16})(\n|$)/);
-        var icon        = code.match(/(^|\n)#icon( *)([A-Z0-9]{16})(\n|$)/);
+          if(checkFunctions) {
+            // function/block calls
+            funcnames   = Object.keys(functions);
+            syntaxError = true;
 
-        if(icon)
-            code = ':' + icon[3] + '\n' + code;
+            for(j = 0, name; j < funcnames.length; j++) {
+              name   = funcnames[j];
+              block  = !!functions[funcnames[j]].block;
+              // Regex | ex: 'display nom'
+              regExp1 = new RegExp('^' + name + ' +(.*?)(\\|\\->([a-zA-Z0-9\\[\\]\\(\\)]+)|)$');
+              regExp2 = new RegExp('^' + name + ' +(.*?) *{$');
 
-        if(description)
-            code = ':"' + description[3] + '\n' + code;
+              if(code.match(block ? regExp1 : regExp2)) {
+                error(tr('Can\'t use "${name}" as a ' + (block ? 'function' : 'block'), [name]));
+                continue ;
+              } else // Improve condition speed (a little ^^)
+              if(match = line.match(block ? regExp2 : regExp1)) {
+                syntaxError = false;
+                $1 = match[1];
+                returnVar = match[3];
 
-        code = code
-            .replace(/^\\( *)(.*)$/mg, '$2')
-            .replace(/^\n{1,}/g, '')
-            .replace(/\n{1,}$/g, '');
+                realArgs = []; args = {};
 
-        while(code.match(/\n\n/))
-            code = code.replace(/\n\n/g, '\n');
+                //argsS = $1.trim().match(/("[^"]+"|[^,]+)/g) || [];
+                argsS = $1.trim().split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
 
-        match = code.match(/(^|\n)#&(.*)&#(\n|$)/gm);
-        var err;
+                // For each argument of the function
+                for(k = 0; k < functions[name].args.length; k += 1) {
+                  e = functions[name].args[k];
 
-        if(match) {
-            err = tr('Compilation aborted') + ' :';
-            for(var i = 0; i < match.length; i += 1)
-                err += '\n    ' + match[i].match(/(^|\n)#&(.*)&#(\n|$)/)[2];
+                  // Check if argument is missing
+                  if(!argsS[k]) {
+                    // Check if argument is needed
+                    if(!e.optionnal) {
+                      error(tr('Missing argument "${name}" (${type}) for function "${func}"', [e.name, tr(e.type), name]));
+                      continue ;
+                    }
+
+                    args[e.name] = e.byDefault || '';
+                  } else {
+                    realArgs.push(e.name);
+                    args[e.name] = argsS[k].trim();
+
+                    if(e.pointer && !UnderBasic.variable(args[e.name], true)) {
+                      error(tr('Invalid argument [${func} : ${name}] : Must be a pointer', [name, e.name]));
+                      continue ;
+                    }
+
+                    if((tmp = UnderBasic.type(args[e.name], true)) !== e.type) {
+                      if(e.type === 'mixed' && tmp)
+                        continue ;
+
+                      if(e.type === 'unref_mixed')
+                        continue ;
+
+                      error(tr('Invalid argument [${func} : ${name}] : Must be a ${type}, ${specified} specified', {
+                          func: name,
+                          name: e.name,
+                          type: tr(e.type),
+                          specified: tr(UnderBasic.type(args[e.name], true) || 'unknown')
+                      }));
+                      continue ;
+                    }
+
+                    args[e.name] = argsS[k].replace(/([^"]+)|("(?:[^"\\]|\\.)+")/g, function($0, $1, $2) {
+                      return $1 ? $1.replace(/\s/g, '') : $2;
+                    });
+                  }
+                }
+
+                ret = functions[name].content;
+
+                if(returnVar) {
+                  ret = ret.replace(/(^|\n) *return +(.*)(\n|$)/, function(match, str1, content, str2) {
+                    return str1 + returnVar + ' = ' + content + str2;
+                  });
+
+                  args.ret = returnVar;
+                }
+
+                ret = ret
+                  .replace(/#unquote *([a-zA-Z0-9_;]+)mg/g, function(match, names) {
+                      names = names.split(';');
+
+                      for(var i = 0; i < names.length; i += 1)
+                          if(args[names[i]])
+                              args[names[i]] = args[names[i]].replace(/^"(.*)"$/, '$1');
+
+                      return '';
+                  })
+                  .replace(/(^|\n)#ifdef *([a-zA-Z0-9_]+)\n((.|\n)*?)\n#endif(\n|$)/g, function(match, a, name, content) {
+                      //return (realArgs.indexOf(name) !== -1) ? a + content + '\n' : a || '\n';
+                      return args.hasOwnProperty(name) ? a + content + '\n' : a || '\n';
+                  })
+                  .replace(/(^|\n)#ifndef *([a-zA-Z0-9_]+)\n((.|\n)*?)\n#endif(\n|$)/g, function(match, a, name, content) {
+                      //return (realArgs.indexOf(name) === -1) ? a + content + '\n' : a || '\n';
+                      return args.hasOwnProperty(name) ? a || '\n' : a + content + '\n';
+                  })
+                  .replace(/^#set +([a-zA-Z0-9_]+) +(.*)$/mg, function(match, name, content) {
+                    args[name] = content;
+                    return '';
+                  });
+
+                if(tmp = ret.match(/^#script *\n((.|\n)*?)#endscript/)) {
+                  try      { eval(tmp[1]); }
+                  catch(e) { console.error(e); error(tr('JavaScript runtime error in function "${name}"', [name])); }
+                  ret = ret.replace(/^#script *\n((.|\n)*?)#endscript/, '');
+                }
+
+                if(block) {
+                  action    = 'CALL_BLOCK';
+                  define    = { name: name, ret: ret, args: args };
+                  ob_buffer = [];
+                } else {
+                  ret = format(ret, args);
+                  lines.splice.apply(lines, [i + 1, 0].concat(ret.split('\n')));
+                }
+
+                //(ob_buffer || out).push(ret);
+                syntaxError = false;
+                break;
+              }
+            }
+
+            if(syntaxError) {
+              if(match = line.match(/^([a-zA-Z0-9_]+) *(.*?){$/))
+                error(tr('Block "${block}" is not defined', [match[1]]))
+              else if(match = line.match(/^([a-zA-Z0-9_]+) +(.*?)$/))
+                error(tr('Function "${func}" is not defined', [match[1]]))
+              else
+                error(tr('Syntax error'));
+            }
+          }
+        }
+
+        if(errors.length) {
+          out = [tr('Compilation aborted (${num} errors) :', [errors.length.toString()]), ''];
+
+          for(i = 0; i < errors.length; i++) {
+           out.push('  ' + errors[i].file + ':' + (errors[i].line + 1).toString() + ' ' + errors[i].message);
+           out.push('  > ' + errors[i].content);
+
+           if(i !== errors.length - 1) // Faster than a '<' comparator
+            out.push('');
+          }
         }
 
         return {
-            content: err || code,
-            duration: (new Date()).getTime() - started,
-            failed: !!err,
-            notices: notices
+          content  : out.join('\n'),
+          duration : (new Date()).getTime() - started,
+          failed   : !!errors.length,
+          notices  : notices,
+          errors   : errors,
+          aliases  : alias,
+          functions: functions
         };
-
-    };
+    }
 
 });
 

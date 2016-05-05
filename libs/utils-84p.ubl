@@ -1,0 +1,20 @@
+
+block timer(number* [timer] = Z, list* [tmp] = LT, number [printResult]) {
+  startTimer(timer, tmp)
+  ${_CONTENT_}
+  endTimer(timer, tmp)
+
+  #ifdef printResult
+  \Disp "Duration :",Z
+  #endif
+}
+
+function startTimer(number* [timer] = Z, list* [tmp] = LT) {
+  \getTime->tmp
+  \1440*tmp(1)+60*tmp(2)+tmp(3)->timer
+}
+
+function endTimer(number* [timer] = Z, list* [tmp] = LT) {
+  \getTime->tmp
+  \timer-(1440*tmp(1)+60*tmp(2)+tmp(3))->timer
+}

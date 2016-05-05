@@ -1,0 +1,9 @@
+import alias
+
+function displayMap(string chars, list* map, number [width] = 8, number [height] = 16, number* [x] = X, number* [y] = Y) {
+  for(y, 1, width) {
+    for(x, 1, height) {
+      \Output(y,x,sub(chars,map(16Y+X-16)-1,1))
+    }
+  }
+}

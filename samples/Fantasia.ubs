@@ -1,0 +1,15 @@
+import alias
+import utils
+
+clearHome()
+print ""
+print " === Fantasia ==="
+print " By Clément Nerma"
+print ""
+print "   New game"
+print "   Continue"
+print "   Quit"
+
+while Z isnt 1 and Z isnt 2 and Z isnt 3 {
+  choice(5, 2, 3, 2, 1)
+}

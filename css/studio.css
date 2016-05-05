@@ -48,3 +48,8 @@ body {
     width: 48%;
     border: 1px solid lightgray;
 }
+
+.CodeMirror {
+  border: 1px solid #eee;
+  height: 500px;
+}

@@ -1,0 +1,47 @@
+import alias
+
+/* Generic blocks */
+
+block split(string* str, string splitChar, string* dest) {
+  \For(theta,1,length(str))
+  \If sub(str,dest,1)=splitChar:Then
+  \sub(str,1,theta-1)->dest
+  \sub(str,theta+1,length(str)-theta)->str
+  ${_CONTENT_}
+  \End
+}
+
+/* Routines support */
+
+block routine(label) {
+  \Lbl label
+  ${_CONTENT_}
+  \End
+}
+
+function call(label) {
+  \For(theta,1,2):If theta-2:Goto label:End
+}
+
+/* Utils */
+
+function choice(number col, number minRow, number choices, number default, number [allowCancel]) {
+  \default->Z
+  \1->D:If Z=1:2->D
+  \0->theta
+
+  \Repeat theta
+  \getKey->W
+  \Z-(Z>1 and W=25)+(W=34 and Z<choices)->Z
+  \If W=24:1->Z
+  \If W=26:choices->Z
+  \If W=105 or W=21:1->theta
+  #ifdef allowCancel
+  \If W=45:theta=1
+  #endif
+  \If Z!=D:Then
+  \Output(minRow+D-1,col," ")
+  \Output(minRow+Z-1,col,"theta")
+  \Z->D
+  \End:End
+}
