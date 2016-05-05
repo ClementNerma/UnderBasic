@@ -25,7 +25,8 @@ var underbasicConfig = {
     localize: true,
     //localizeCamelCase: true,
     checkVariablesName: true,
-    checkAssignments: true
+    //checkAssignments: true
+    // DISABLED because this feature is still experimental
 };
 
 var editor = CodeMirror($('#editor').get(0), {

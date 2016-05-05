@@ -18,7 +18,7 @@ var libErr = {
 };
 
 var libraries = {};
-var keyWords = ['function', 'ret'];
+var keyWords = ['function', 'ret', 'block'];
 
 /**
   * UnderBasic compiler
@@ -322,16 +322,16 @@ var UnderBasic = new (function() {
 
           checkFunctions = false;
 
-          // Support of lists indexes
-          line = line.replace(/([^a-zA-Z])L([A-Z]+)\[(.+?)\]/g, '$1L$2($3)');
-          // Support of matrix indexes
-          line = line.replace(/\[([A-Z])\]\[(.+?),(.+?)\]/g, '[$1]($2,$3)');
-
           // support of functions call with parenthesis
           if(match = line.match(/^([a-zA-Z0-9_]+) *\( *(.*) *\) *(|{)$/)) {
             if(keyWords.indexOf(match[1].toLocaleLowerCase()) === -1)
               line = match[1] + ' ' + match[2] + (match[3] || '');
           }
+
+          // Support of lists indexes
+          line = line.replace(/(^|[^a-zA-Z])L([A-Z]+)\[(.+?)\]/g, '$1L$2($3)');
+          // Support of matrix indexes
+          line = line.replace(/\[([A-Z])\]\[(.+?),(.+?)\]/g, '[$1]($2,$3)');
 
           // #include directive
           if(match = line.match(/^(#|)include *([a-zA-Z0-9_\-,\.]+)$/)) {
@@ -441,7 +441,7 @@ var UnderBasic = new (function() {
             }
           } else
           // #define, #def, #alias directives
-          if(match = line.match(/^(#def|#define|#alias|) *([a-zA-Z0-9_]+) *: *(.+)$/)) {
+          if(match = line.match(/^(#def|#define|#alias|def|define|alias|) *([a-zA-Z0-9_]+) *: *(.+)$/)) {
             if(keyWords.indexOf(match[1]) !== -1)
               return error(tr('Alias "${name}" mustn\'t be a reserved keyword', [match[2]]));
 
@@ -464,7 +464,16 @@ var UnderBasic = new (function() {
           // variables assignement using a function
           if(match = line.match(/^([A-Za-z0-9\[\]\(\)]+) *= *([a-zA-Z0-9_]+) *\( *(.*) *\)$/)) {
             checkFunctions = true;
-            line = match[2] + ' ' + match[3] + '|->' + match[1];
+
+            if(!match[1].match(/^L([A-Z]+)[^a-zA-Z_]/))
+              line = match[2] + ' ' + match[3] + '|->' + match[1];
+            else {
+              (ob_buffer || out).push((match[2] + '(' + match[3] + ')').replace(/([^"]+)|("(?:[^"\\]|\\.)+")/g, function($0, $1, $2) {
+                return $1 ? $1.replace(/\s/g, '') : $2;
+              }) + '->' + match[1]);
+
+              continue ;
+            }
           } else
           // variables assignement
           if(match = line.match(/^([A-Za-z0-9\[\]\(\)]+) *= *(.*?)$/)) {
@@ -536,7 +545,9 @@ var UnderBasic = new (function() {
                     args[e.name] = e.byDefault || '';
                   } else {
                     realArgs.push(e.name);
-                    args[e.name] = argsS[k].trim();
+                    args[e.name] = argsS[k].trim().replace(/([^"]+)|("(?:[^"\\]|\\.)+")/g, function($0, $1, $2) {
+                      return $1 ? $1.replace(/\s/g, '') : $2;
+                    });
 
                     if(e.pointer && !UnderBasic.variable(args[e.name], true)) {
                       error(tr('Invalid argument [${func} : ${name}] : Must be a pointer', [name, e.name]));
@@ -559,9 +570,7 @@ var UnderBasic = new (function() {
                       continue ;
                     }
 
-                    args[e.name] = argsS[k].replace(/([^"]+)|("(?:[^"\\]|\\.)+")/g, function($0, $1, $2) {
-                      return $1 ? $1.replace(/\s/g, '') : $2;
-                    });
+                    args[e.name] = argsS[k].trim();
                   }
                 }
 
@@ -586,12 +595,12 @@ var UnderBasic = new (function() {
                       return '';
                   })
                   .replace(/(^|\n)#ifdef *([a-zA-Z0-9_]+)\n((.|\n)*?)\n#endif(\n|$)/g, function(match, a, name, content) {
-                      //return (realArgs.indexOf(name) !== -1) ? a + content + '\n' : a || '\n';
-                      return args.hasOwnProperty(name) ? a + content + '\n' : a || '\n';
+                      return (realArgs.indexOf(name) !== -1) ? a + content + '\n' : a || '\n';
+                      //return args.hasOwnProperty(name) ? a + content + '\n' : a || '\n';
                   })
                   .replace(/(^|\n)#ifndef *([a-zA-Z0-9_]+)\n((.|\n)*?)\n#endif(\n|$)/g, function(match, a, name, content) {
-                      //return (realArgs.indexOf(name) === -1) ? a + content + '\n' : a || '\n';
-                      return args.hasOwnProperty(name) ? a || '\n' : a + content + '\n';
+                      return (realArgs.indexOf(name) === -1) ? a + content + '\n' : a || '\n';
+                      //return args.hasOwnProperty(name) ? a || '\n' : a + content + '\n';
                   })
                   .replace(/^#set +([a-zA-Z0-9_]+) +(.*)$/mg, function(match, name, content) {
                     args[name] = content;

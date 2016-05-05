@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Documentation - UnderBasic</title>
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" type="text/css" />
+  <link href="prism.css" rel="stylesheet" type="text/css" />
+  <style type="text/css" charset="utf-8">
+    body {
+      font-family: "Open Sans", sans-serif;
+      background-color: rgba(0, 0, 0, 0.1)
+    }
+
+    p {
+      text-align: justify;
+      line-height: 2em;
+    }
+
+    h2 {
+      color: rgb(8, 178, 184);
+      cursor: pointer;
+    }
+
+    h2:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h2 id="basic-syntax">1. Basic syntax</h2>
+  <p>
+    UnderBasic has a very simple syntax. When you call a function, you can put or not parenthesis, and spaces :
+    <code>print "A first message"
+          print("A second message")
+          print   "A first message"   </code>
+    When you use a block (see below), that's the same thing :
+    <code>for(A, 1, 8) {
+      &tab;print "A first message"
+    }
+
+    for A, 1, 8 {
+    &tab;print "A second message"
+    }</code>
+
+    You can put comments on your code : For one-line comments, use // ... or # ...<br />
+    For multiple lines comments, use /* ... */ or ### ... ###
+    <code>// Here we print a text
+          print "Hello world" # It says "Hello world" !
+
+          ###
+          NOTE : You can add parenthesis if you want
+                 Multi-lines comments are really useful !
+          ###</code>
+  </p>
+
+  <h2 id="load-library">2. Load a library</h2>
+  <p>
+    A <em>library</em> is a code that generally contains a lot of functions, and, sometimes, aliases. You can include libraries with the following code :
+    <code>import name</code>
+    The main libraries you will probably ever use are <strong>alias</strong> and <strong>utils</strong>.<br />
+    You will ALWAYS use the first one because it defines functions which permit to print a text, evaluate a string, do a loop...<br />
+    The second one contains some useful features like routines (we will talk about it after) or functions like choice() which are so complicated to make himself.<br />
+    So, I recommand you to start all your codes by :
+    <code>import alias
+          import utils</code>
+  </p>
+
+  <h2 id="call-function">3. Call a function</h2>
+  <p>
+    You will <em>always</em> use functions in UnderBasic. At each line (or almost). So you will have to know their syntax and how they works.<br />
+    This is a tiny example :
+    <code>print "Hello World"</code>
+    This will print a <em>Hello World</em> message on your calculator's screen.<br />
+    If you want to display this message at position Y=2 X=4 do :
+    <code>output 2, 4, "Hello World"</code>
+  </p>
+
+  <h2 id="use-block">4. Use a block</h2>
+  <p>
+    Block are special functions which needs a <em>content code</em> to work. There are three 'main' blocks, which are three loops : for, while and repeat.<br />
+    Let's see how the <strong>for</strong> block works. It has the same syntax as a function, but you will had to add a '{' at the end of the line. It takes three arguments :<br />
+    <ul>
+      <li><strong>iterator</strong>, the variable to iterate (e.g. : A)</li>
+      <li><strong>start</strong>, the start value</li>
+      <li><strong>end</strong>, the end value</li>
+    </ul>
+    So let's do a loop which run a code 5 times :
+    <code>for(A, 1, 5)</code>
+  </p>
+
+  <h2 id="use-variable">5. Use variable</h2>
+  <p>
+    Now we'll see how to use variables. UnderBasic hasn't his <em>own</em> variables, but it will use TI-Basic ones, like A, B, C, [A], LSUITE, ...
+    You don't have to do any particular thing to use variables in your code, just use their name, like :
+    <code>print "Hello Mr. " + Str1 + " !"
+          print "Value of A + B is : "
+          print A + B</code>
+    Special case for lists : You must use the "L" letter before a list's name, like LSUITE to use the list named 'SUITE'.
+  </p>
+
+  <h2 id="variables-assign">6. Variables assignement</h2>
+  <p>
+    Now, let's see how to assign values to variables. The compiler will not really assign values, but it will check their types (even it's not perfect) and convert it in TI-Basic syntax.<br />
+    If you want to do a simple mathematical addition 2 + 5 and set the result to variable 'A', do :
+    <code>A = 2 + 5</code>
+    That's simple, isn't it ? If you want to use a function to assign, use :
+    <code>A = expression("(2 + 5) / 2")</code>
+    That's all !
+  </p>
+
+  <h2 id="aliases">7. Aliases</h2>
+  <p>
+    Aliases are one of the best features of the UnderBasic language : they permit to create an alias which refer to a value.<br />
+    If you see just this feature, you will not be so happy.... But you'll see, that's useful.<br />
+    Let's see an exemple : You want to use a string which contains the hero's name, which is a constant, but you want to be able to change it at any moment and you don't want to rewrite it every three lines.<br />
+    So write :
+    <code>#alias hero_name : "Link"
+          print hero_name
+          print "Yes, the hero is called " + hero_name</code>
+    You see ? Now you can use the variable <em>hero_name</em> whenever you want.<br />
+    The real point of this feature is to give a name to variables. Maybe you hate always use one-letter names ? Now you can extend theses possibilities using aliases ! Guess how... ?
+    <code>#alias name : Str1
+          #alias age  : G
+
+          input "Your name ? ", name
+          input "Your age  ? ", age
+          print "Hello " + name + " !"
+          print "Your age is :"
+          print name</code>
+  </p>
+
+  <h2 id="multi-syntax">6. Multi-syntax features</h2>
+  <p>
+    Because we want user to write the code that is the most adapted to his personnality (yes, I know, it looks like an Apple ad), some features have multiple syntaxes.<br />
+    Let's see an exemple : Aliases. You can define aliases by many different ways !
+    <code>#alias  name : Peter
+          #define name : Peter
+          #def    name : Peter
+          alias   name : Peter
+          define  name : Peter
+          def     name : Peter
+          # Or even...
+          name : Peter</code>
+    When you import a library :
+    <code>#library alias
+           library alias
+          #import  alias
+           import  alias</code>
+  </p>
+
+  <h2 id="tibasic">7. How to use TI-Basic code in UnderBasic</h2>
+  <p>
+    That's the most simple thing to do in UnderBasic. If you try to use the TI-Basic syntax, the compiler will throws many errors. To use it, just write :
+    <code>
+      \2->A
+      \Disp A
+    </code>
+    And the compiler <em>won't</em> check the syntax of the code. But be careful, don't forget TI-Basic doesn't accept spaces for example ! The following code won't work :
+    <code>
+      \Disp A + B # When you run it on your calculator, throws a syntax error
+    </code>
+    <strong>NOTE :</strong> The aliases won't work anymore. To use it, write ${name_of_the_alias}
+    <code>
+      \Disp ${age} + 5
+    </code>
+   </p>
+
+  <h2 id="create-function">8. Create functions</h2>
+  <p>
+    We'll now see how to create our own functions we'll can use in our code.<br />
+    To make a function, just write :
+    <code>function hello() {
+      &tab;
+    }</code>
+    So simple :O<br />
+    But this function does nothing ! So let's display a "hello" message :
+    <code>function hello() {
+      &tab;print "hello"
+    }</code>
+    Awesome, isn't it ;-) ? But this function is still useless. Now we will specify an argument which is the name of the person.<br />
+    <code>function hello(string name) {
+      &tab;print "Hello " + name
+    }</code>
+    Now, we can call our function with :
+    <code>hello "Peter"</code>
+    OK, that's not really useful. But that's working !<br />
+    Let's see the <strong>string name</strong> part. <strong>string</strong> significates that the argument must be a string. This is the <em>type</em> of the argument.<br />
+    You can specify a string value, that's what we did just now, or a string variable : Str0, Str1...<br />
+    The different types you can specify are : <em>string, number, list, matrix, yvar, picture, GDB, program, appvar, group, application</em>. Yes, <em>application</em> !<br />
+    The last types I've writed are special types : In fact, you can't use it into a simple TI-Basic program. You'll need to use a library named <strong>Celtic III</strong>, an assembly program which permit to manipulate programs, appvars, applications...
+  </p>
+
+  <h2 id="functions-return">9. Returning values into functions</h2>
+  <p>
+    Yes, yes, that's possible. Imagine you have a function that add two terms (really useful, right ?), and you want to store the result in a variable. How can you do ? Just like that :
+    <code>
+      function add(number termA, number termB) {
+      &tab;return termA + termB
+      }
+    </code>
+    Now you call the function :
+    <code>
+      A = add(2, 5)
+    </code>
+    That's all !
+  </p>
+
+  <h2 id="make-routines">10. Make routines</h2>
+  <p>
+    Functions are useful but they have one big problem : Each time you call it, all it's code is writed one time again. If you call a big function many time, your TI-Basic code will be enormous !<br />
+    There is a way to solve it, called <em>routines</em>. That's a part of code you can use any time you want and the code is never writed two times. In fact, that's a kind of cheat becaues it uses a TI-Basic "bug", but it will not destroy your calculator ! That's simply a program particularity which permit to perform some useful operations, like routines.<br />
+    But there is one big problem for routines too : The name of the routine can only be two characters, letter or digit only ;-(. That uses labels, and labels' name can be only writed like that. But there are 1296 possible labels, so you'll be able to create a lot of routines !<br />
+    The second (real) problem is that you can't pass any argument to a routine. You will have to set values into variables and then run the routine. But that permit to have a very smaller code !<br />
+    To create one, we'll define an alias to don't have to right the two-chars name. We'll have to include the <strong>utils</strong> library too, so I will write here the <em>entire</em> code (so you can copy and paste it directly into the compiler) :
+    <code>
+      import alias
+      import utils
+
+      #alias sayHello : Z0
+    </code>
+
+    Now, let's define our routine. We'll use the block which have the same name. It takes one argument, the name of the routine, without quote.
+    <code>routine(sayHello) {
+
+    }</code>
+    We put our code inside :
+    <code>routine(sayHello) {
+      &tab;print "Hello " + Str0
+      &tab;print "How are you ?"
+      &tab;print "You are " + Str1 + " !"
+      &tab;print "Really ?"
+      &tab;print "Me too !"
+    }</code>
+
+    And then we can call our tiny routine with the <strong>call</strong> function, which takes too the routine's name without quotes.
+    But before, we define the content of Str0 :
+
+    <code>input "Your name ? ", Str0</code>
+
+    Now we can call our routine :
+
+    <code>call(sayHello)</code>
+
+    <strong>BUT BE CAREFUL !</strong> You MUST place all of your code <em>before</em> declaring any routine, and use the <strong>exit()</strong> or the <strong>Return()</strong> function at the end. So here is the entire code :
+
+    <code>
+      import alias                # Import libraries
+      import utils
+
+      #alias sayHello : Z0        # Define routine's name alias
+
+      input "Your name  ? ", Str0 # Input the user's name
+      call(sayHello)              # Call the routine
+      exit()                      # Exit the program (otherwise all routines will be runned !!)
+
+      routine(sayHello) {         # Define the routine
+      &tab;print "Hello " + Str0   # Do stuff here...
+      &tab;print "How are you ?"
+      &tab;input "Your humor : ", Str1
+      &tab;print "You are " + Str1 + " !"
+      &tab;print "Me too !"
+      }                           # The end
+    </code>
+  </p>
+
+  <div style="border:1px solid black;padding:15px;">
+    This tutorial is now finished. But you can click the link below to show the advanced part of the tutorial.<br />
+    It shows you how to create advanced functions (optionnal arguments, default values, pointers...), how to create blocks, and some extra features (conditionnal directives...)<br /><br />
+
+    <a id="show_advanced" href="#">Show the advanced part</a>
+  </div>
+
+  <div id="advanced" style="display:none;">
+    <h2 id="advanced-arguments">I - Advanced arguments definitions</h2>
+    <h2 id="pointers">1. Pointers</h2>
+    When you define a function, maybe you'll want to have a variable, not a value. For example, let's imagine a string. You have to perform many operations on this string. If you accept both variables and values, you'll maybe have :
+    <code>
+      function cut_from_space(string str) {
+        &tab;Z = length(str)
+        &tab;for(A, 1, Z) {
+          &tab;&tab;if(sub(str, A, 1) = " ") {
+          &tab;&tab;&tab;Str0 = sub(str, A + 1, Z - A) # We need to put result in Str0
+          &tab;&tab;&tab;A = Z + 1
+          &tab;&tab;}
+        &tab;}
+      }
+    </code>
+    And you do :
+    <code>
+      cut_from_space("This is a very very very long string, isn't it ? I think that's really boring to write a so long string...")
+    </code>
+    The final TI-Basic code will be :
+    <code>
+      length("This is a very very very long string, isn't it ? I think that's really boring to write a so long string...")
+      For(A,1,Z)
+      If sub("This is a very very very long string, isn't it ? I think that's really boring to write a so long string..."
+      Then
+      sub("This is a very very very long string, isn't it ? I think that's really boring to write a so long string...",A + 1,Z - A)
+      Z+1->A
+      End
+      End
+    </code>
+    That's WAY too long :o ! So you will use a <strong>pointer</strong>, you will ask 'I want a variable, not a value'. You can do it by adding a star "*" after the argument's type :
+    <code>
+      function cut_from_space(string* str) {
+        &tab;Z = length(str)
+        &tab;for(A, 1, Z) {
+          &tab;&tab;if(sub(str, A, 1) = " ") {
+          &tab;&tab;&tab;str = sub(str, A + 1, Z - A) # Str0 is no longer modified because we now have a pointer and we can modify him
+          &tab;&tab;&tab;A = Z + 1
+          &tab;&tab;}
+        &tab;}
+      }
+    </code>
+    Now, the previous code won't work, and you will run the function like this :
+    <code>
+      Str0 = "This is a very very very long string, isn't it ? I think that's really boring to write a so long string..."
+      cut_from_space(Str0)
+    </code>
+    And the final TI-Basic code becomes :
+    <code>
+      "This is a very very very long string, isn't it ? I think that's really boring to write a so long string..."->Str0
+      length(Str0)
+      For(A,1,Z)
+      If sub(Str0
+      Then
+      sub(Str0,A + 1,Z - A)
+      Z+1->A
+      End
+      End
+    </code>
+    The code is <u>two times</u> smaller !<br />
+    Another goal of using a pointer is if you <em>need</em> a pointer, like the <strong>for</strong> block. Here is the beginning of it's source code :
+    <code>
+      block for(number* iterator, number start, number end) {
+    </code>
+    It can't work without a variable. Why ? Imagine you are using JavaScript, Python, C++ or any other language which supports the for() loop. Do you think this code will work ?
+    <code>for(5 = 0, 1, 2)</code>
+    No, it doesn't make sense. Because it needs an iterator, a variable which will be iterated at each run.
+    <code>for(counter = 0, 1, 2)</code>
+    That will works.
+
+    <h2 id="optionnal-args">2. Optionnal arguments</h2>
+    Maybe you'll want one of the arguments to be optionnal. For example, you have a function which perform a complex mathematical operation, and you want to permit user having a value multiplied by a coefficient without writing another line of code.<br />
+    You'll use an <em>optionnal argument</em>. When user call the function, he will not be asked for the optionnal argument. If he specify it, it takes the value he have specified. But if he doesn't specify the argument, it takes the default value you want.
+    <code>
+      function financial(number t1, number t2, number [coefficient] = 1) { # Here, the default coefficient is 1
+      &tab;return (t1 + t2 * cos(t1) / cos(t2)) + (tan(t1)) * (t1 - coefficient)
+      }
+    </code>
+    Now, you can write :
+    <code>
+      A = financial(8, 7.5)      # (8 + 7.5 * cos(8) / cos(7.5)) + (tan(8)) * (8 - 1)
+      A = financial(8, 7.5, 0.6) # (8 + 7.5 * cos(8) / cos(7.5)) + (tan(8)) * (8 - 6)
+    </code>
+    Useful, isn't it ;-) ?
+
+    <h2 id="mixed-contents">3. Mixed contents</h2>
+    Now, we'll see <em>mixed</em> contents. That's arguments which can take any type, list, matrix, string or either number. You can pass what you want to the function !<br />
+    The use of this type is rare, because it's generally useful only when you are using a TI-Basic command which supports the mixed type ! (e.g. : Input)<br />
+    You can define a mixed argument like that :
+    <code>
+      function input(mixed* name) {
+    </code>
+    <strong>NOTE :</strong> Here I use a pointer, but you can remove the star "*" to accept values too.
+
+    <h2 id="create-blocks">II - Create blocks</h2>
+    <p>
+      Now, let's see how to create blocks. <em>Blocks</em> are some particular functions I've talked about in the <a href="#use-block">4<small>th</small> paragraph</a>.<br />
+      We will now create our own block ! But before beginning, what is the point of a block ? In fact, that permit to <em>encapsulate</em> a code into another. For example, in the for loop case, that's permit to use the TI-Basic <strong>For</strong> command, put your code, and then place the <strong>End</strong> token, which is ugly when you see it on your computer's screen.<br />
+      So let's see a little example : We'll create a block that defines some variables, run the code many times (user specify how many times, that's an argument named <em>times</em>), and then delete them. First, here is a block declaration syntax :
+      <code>block vars(number times) {</code>
+      That's really similar to functions, but here we use the <strong>block</strong> keyword.<br />
+      When we'll want to put the block's specified code (what we put between '{' and '}' when we use the block), we'll use a variable named _CONTENT_. But we don't want to use it at a simple variable, we want to put it directly in our function's code. So we'll use ${_CONTENT_} to disable compiler's syntax checking. It will only check the syntax of the code himself, not how we use this variable.
+      <code>block vars(number times) {
+        &tab;A = 8
+        &tab;B = 7
+        &tab;D = 4
+        &tab;LSUITE = {4, 8, 7, 6, 5, 2, 8, 4, 6, 5}
+        &tab;for(A, 1, times) {
+        &tab;&tab;${_CONTENT_}
+        &tab;}
+        &tab;deleteVar A
+        &tab;deleteVar B
+        &tab;deleteVar D
+        &tab;deleteVar LSUITE
+      }</code>
+      Now we can call this block by writing :
+      <code>
+        vars(5) {
+        &tab;print (A * D + 5) / tan(LSUITE(5))
+        }
+
+        vars 8 {
+        &tab;print (A * D + 8) / cos(LSUITE(3) + tan(LSUITE(5))) * (sin(LSUITE(3)))
+        }
+      </code>
+
+      Imagine if we had to write all this code two times :o !
+    </p>
+
+    <h2 id="extra-features">III - Extra features</h2>
+    <h2 id="conditionnal-directives">1. Conditionnal directives</h2>
+    <em>Conditionnal directives</em>. That's their name. They are everywhere. Everywhen.<br />
+    Now, we'll see a very secret feature... No, I'm kidding.<br />
+    That are directives that permit to run a code <em>only if</em> an argument does (not) exist.<br />
+    Let's see : we have a function that takes an optionnal argument, like we did in <a href="#optionnal-args">Optionnal Arguments</a> section. We take it's code one time again :
+    <code>function financial(number t1, number t2, number [coefficient] = 1) {
+          &tab;return (t1 + t2 * cos(t1) / cos(t2)) + (tan(t1)) * (t1 - coefficient)
+          }</code>
+
+    Maybe you want to add a special code if <strong>coefficient</strong> is defined ? Like displaying a message, why not ? But how to do it ? We'll simply use the <em>#ifndef</em> directive, which means If Not Defined. There is also the <em>#ifdef</em> directive, but we doesn't want it here. To close the condition, we put a <em>#endif</em> directive at the end :
+    <code>function financial(number t1, number t2, number [coefficient] = 1) {
+          &tab;#ifndef coefficient
+          &tab;
+          &tab;#endif
+          &tab;return (t1 + t2 * cos(t1) / cos(t2)) + (tan(t1)) * (t1 - coefficient)
+          }</code>
+
+    We can now put our code between the two directives. But there is also an interesting feature with these directives : you can use <em>#set</em> to assign a value to an argument. You can also <em>create</em>n interesting argument.<br />
+    Also, you can put UnderBasic code which will be compiled <u>only</u> if this argument is defined, like our message :
+
+    <code>function financial(number t1, number t2, number [coefficient] = 1) {
+          &tab;#ifndef coefficient
+          &tab;print "WARN: No coeff"
+          &tab;#endif
+          &tab;return (t1 + t2 * cos(t1) / cos(t2)) + (tan(t1)) * (t1 - coefficient)
+          }</code>
+    <!-- explain what is it, #ifdef #ifndef #endif #set !-->
+  </div>
+
+  <h3>Thanks a lot for viewing this tutorial ! I hope that helped you !</h3>
+
+  <!-- ======================================================= !-->
+  <br /><hr />
+  <small><em>Clément Nerma, All rights reserved</em></small>
+
+  <!-- Scripts part !-->
+  <script type="text/javascript" charset="utf-8">
+    var codes = document.getElementsByTagName('code'), pre, code, source, j,
+        titles, link;
+
+    // Prepare `code` tags for syntax higlighting
+    for(var i = 0; i < codes.length; i++) {
+      source = codes[i].innerHTML.split('\n');
+
+      for(j = 0; j < source.length; j++)
+        source[j] = source[j].trim();
+
+      if(!source[0])
+        source.splice(0, 1);
+
+      pre  = document.createElement('pre');
+      pre.innerHTML = '<code class="language-python">' + source.join('\n').replace(/&amp;tab;/g, '&nbsp;&nbsp;&nbsp;&nbsp;') + '</code>';
+
+      codes[i].parentElement.replaceChild(pre, codes[i]);
+    }
+
+    /* Make `h2` titles clickables */
+    titles = document.getElementsByTagName('h2');
+
+    for(i = 0; i < titles.length; i++)
+      titles[i].addEventListener('click', function(event) {
+        window.location.hash = this.getAttribute('id');
+        event.preventDefault();
+      });
+
+    // Add `click` event for #show_advanced
+    document.getElementById('show_advanced').addEventListener('click', function(event) {
+      document.getElementById('advanced').style.display = 'block';
+      this.parentElement.remove();
+      event.preventDefault();
+    });
+
+    // If URL is ......?advanced, show advanced content
+    if(window.location.search === '?advanced') {
+      document.getElementById('advanced').style.display = 'block';
+      document.getElementById('show_advanced').parentElement.remove();
+    }
+  </script>
+  <script type="text/javascript" src="prism.js"></script>
+</body>
+</html>

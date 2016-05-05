@@ -1,4 +1,11 @@
 
+UnderBasic v0.7
+- Improved libraries
+- Added documentation page (/doc)
+- Fixed: Bugs with arguments when checking type
+- Fixed: Bug with syntax highlighting for output code (trying to parse an object)
+- Fixed: MAJOR bugs with lists
+
 UnderBasic v0.6
 - Improved libraries
 - Added support for aliases

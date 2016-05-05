@@ -25,7 +25,9 @@ function tax(e, f)
 {
 	$.ajax({url: 'js/cm-mode/' + e + '.json', async: false, success: function(g)
 	{
-		g = JSON.parse(g);
+		if(typeof g !== 'object')
+			g = JSON.parse(g);
+
 		for (var h = 0; h < g.length; h++)
 		{
 			if (Object.prototype.toString.call(g[h]) == '[object Array]')
@@ -46,7 +48,7 @@ function tax(e, f)
 
 		if (typeof f == 'function')
 			f();
-	}});
+	}, error: function(e) { console.error('Failed to access basic JSON sheet !'); console.error(e); }});
 }
 
 list = {basic: {}};

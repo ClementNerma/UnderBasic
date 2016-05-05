@@ -1,19 +1,34 @@
 
 #alias answer : Ans
 
-function input(string text, string* name) {
-  \Input text,${name}
+function input(string text, mixed* name) {
+  \Input text,name
 }
 
-function echo(mixed text) {
+function echo(unref_mixed text) {
+  #script
+  args.text = args.text.replace(/([^"]+)|("(?:[^"\\]|\\.)+")/g, function($0, $1, $2) {;
+    return $1 ? $1.replace(/\s/g, '') : $2;
+  });
+  #endscript
   \Disp text
 }
 
-function display(mixed text) {
+function display(unref_mixed text) {
+  #script
+  args.text = args.text.replace(/([^"]+)|("(?:[^"\\]|\\.)+")/g, function($0, $1, $2) {;
+    return $1 ? $1.replace(/\s/g, '') : $2;
+  });
+  #endscript
   \Disp text
 }
 
-function print(mixed text) {
+function print(unref_mixed text) {
+  #script
+  args.text = args.text.replace(/([^"]+)|("(?:[^"\\]|\\.)+")/g, function($0, $1, $2) {;
+    return $1 ? $1.replace(/\s/g, '') : $2;
+  });
+  #endscript
   \Disp text
 }
 
@@ -58,7 +73,7 @@ function parseInt(string str) {
 }
 
 function expression(string str) {
-  \expr(str)
+  \expr(str)->ret
 }
 
 function minimum(number first, number second) {
@@ -153,6 +168,10 @@ function squareLength(matrix mtx) {
   \dim(mtx)[0]*dim(mtx[1])
 }
 
+function deleteVar(mixed* name) {
+  \DelVar name
+}
+
 block for(number* iterator, number start, number end) {
   \For(iterator,start,end)
   ${_CONTENT_}
@@ -192,6 +211,13 @@ block while(unref_mixed condition) {
 
 block repeat(unref_mixed condition) {
   _block(Repeat, condition)
+  ${_CONTENT_}
+  \End
+}
+
+block if(unref_mixed condition) {
+  _block(If, condition)
+  \Then
   ${_CONTENT_}
   \End
 }
