@@ -1,15 +1,72 @@
 import alias
 import utils
 
+#define name       : VotreNom
+#define menu       : Z0
+#define displayMap : ZA
+#define keyEvent   : ZK
+#define heroChar   : "O"
+#define save       : LFNTSV
+
+# Main code here
+# Main menu
+Label menu
 clearHome()
 print ""
 print " === Fantasia ==="
-print " By Clément Nerma"
+print " By ${name}"
 print ""
 print "   New game"
 print "   Continue"
 print "   Quit"
 
-while Z isnt 1 and Z isnt 2 and Z isnt 3 {
-  choice(5, 2, 3, 2, 1)
+Z = choice(5, 2, 3, 2, 1)
+
+if(Z is 2 and not save[1]) {
+  goto menu
+}
+
+# User has quit by pressing [Cancel] or chosen "Quit"
+if(not Z or Z is 3) {
+  exit()
+}
+
+# User has chosen "New game"
+# If he have a save, confirmation
+if(save[1]) {
+  C = confirm("Erase save ?", "Can't be recovered.")
+}
+
+
+exit()
+
+# Routines
+
+routine(displayMap) {
+  output 1, 1, Str0
+  output Y, X, heroChar
+  D = 1
+  E = 1
+  if(X = 1) {
+    E = 2
+  }
+}
+
+routine(keyEvent) {
+  G = getKey
+  \X-(G=24 and X)+(G=26 and X<16)->X
+  \Y-(G=25 and Y)+(G=34 and Y<8)->Y
+
+  Z = dim(LE)
+  for(A, 1, Z) {
+    \If LE(A)=Y+X/100:Then:1->K:Z+1->A:End
+  }
+
+  // BUG with this line / BUG with # commentary into routines
+  //if not K and sub(Str0,16Y+X-16,1) {
+  //  Y = D
+  //  X = E
+  //}
+
+  \If !K and sub(Str0,16Y+X-16,1):Then:D->Y:E->X:End
 }

@@ -122,50 +122,50 @@ var UnderBasic = new (function() {
       */
     this.variable = function(varname, extended, celtic3) {
 
-        if(varname.match(/^Str([0-9])$/))
-            return 'string';
+      if(varname.match(/^Str([0-9])$/))
+        return 'string';
 
-        if(varname.match(/^[A-Z]$/))
-            return 'number';
+      if(varname.match(/^[A-Z]$/))
+        return 'number';
 
-        if(varname.match(/^L([A-Z]){1,6}$/))
-            return 'list';
+      if(varname.match(/^L([A-Z]){1,6}$/))
+        return 'list';
 
-        if(varname.match(/^L([A-Z]){1,6}\[([A-Z0-9]+)\]$/))
-            return 'number';
+      if(varname.match(/^(L([A-Z]){1,6}|Ans)\[([A-Z0-9]+)\]$/))
+        return 'number';
 
-        if(varname.match(/^\[([A-Z])\]$/))
-            return 'matrix';
+      if(varname.match(/^\[([A-Z])\]$/))
+        return 'matrix';
 
-        if(varname.match(/^\[([A-Z])\]\(([A-Z0-9]+),([A-Z0-9]+)\)$/))
-            return 'number';
+      if(varname.match(/^(\[([A-Z])\]|Ans)\(([A-Z0-9]+),([A-Z0-9]+)\)$/))
+        return 'number';
 
-        if(varname.match(/^Y[0-9]$/))
-            return 'yvar';
+      if(varname.match(/^Y[0-9]$/))
+        return 'yvar';
 
-        if(varname.match(/^Pic[0-9]$/))
-            return 'picture';
+      if(varname.match(/^Pic[0-9]$/))
+        return 'picture';
 
-        if(varname.match(/^GDB[0-9]$/))
-            return 'GDB';
+      if(varname.match(/^GDB[0-9]$/))
+        return 'GDB';
 
-        if(!extended)
-            return false;
+      if(!extended)
+        return false;
 
-        if(varname.match(/^prgm([A-Z]{1,8})$/))
-            return 'program';
+      if(varname.match(/^prgm([A-Z]{1,8})$/))
+        return 'program';
 
-        if(!celtic3)
-            return false;
+      if(!celtic3)
+        return false;
 
-        if(varname.match(/^appv([A-Z]{1,8})$/))
-            return 'appvar';
+      if(varname.match(/^appv([A-Z]{1,8})$/))
+        return 'appvar';
 
-        if(varname.match(/^group([A-Z]{1,8})$/))
-            return 'group';
+      if(varname.match(/^group([A-Z]{1,8})$/))
+        return 'group';
 
-        if(varname.match(/^app([A-Za-z0-9]{1,8})$/))
-            return 'application';
+      if(varname.match(/^app([A-Za-z0-9]{1,8})$/))
+        return 'application';
 
     };
 
@@ -291,7 +291,7 @@ var UnderBasic = new (function() {
 
           if(line === '}') {
             if(accLevel) accLevel -= 1;
-            if(accLevel) { ob_buffer.push('}'); continue ; };
+            if(accLevel && action) { ob_buffer.push('}'); continue ; };
 
             if(!action)
               error(tr('Syntax error : No closing bracket is needed here'));
@@ -306,7 +306,16 @@ var UnderBasic = new (function() {
               ob_buffer = null; action = null; define = null;
             } else if(action === 'CALL_BLOCK') {
               define.args._CONTENT_ = ob_buffer.join('\n');
-              lines.splice.apply(lines, [i + 1, 0].concat(format(define.ret, define.args).split('\n')));
+              args = define.args; // Used for libraries
+              ret  = define.ret ; //
+
+              if(tmp = ret.match(/^#script *\n((.|\n)*?)#endscript/)) {
+                try      { eval(tmp[1]); }
+                catch(e) { console.error(e); error(tr('JavaScript runtime error in function "${name}"', [name])); }
+                ret = ret.replace(/^#script *\n((.|\n)*?)#endscript/, '');
+              }
+
+              lines.splice.apply(lines, [i + 1, 0].concat(format(ret, args).split('\n')));
 
               ob_buffer = null; action = null; define = null;
             } else
@@ -339,8 +348,9 @@ var UnderBasic = new (function() {
 
             if(!options.files || !options.files.hasOwnProperty(file))
               error(tr('Can\'t include file "${file}" : File not found', [file]));
-            else
-              lines.splice.apply(lines, [i + 1, 0].concat(['#file ' + file]).concat(((!options.preventJavaScriptFromIncludeFiles || !options.preventJavaScript) ? files[file] : files[file].replace(/(^|\n) *#script *\n((.|\n)*?) *#endscript *(\n|$)/g, '$1$3')).split('\n')).concat(['#endfile']));
+            else {
+              lines.splice.apply(lines, [i + 1, 0].concat(['#file ' + file]).concat(((!options.preventJavaScriptFromIncludeFiles || !options.preventJavaScript) ? files[file] : files[file].replace(/(^|\n) *#script *\n((.|\n)*?) *#endscript *(\n|$)/g, '$1$3')).replace(/###((.|\n)*?)###/g, '').replace(/\/\*((.|\n)*?)\*\//g, '').replace(/(^|\n) *#script *\n((.|\n)*?) *#endscript *(\n|$)/g, '$1$3').split('\n')).concat(['#endfile']));
+            }
           } else
           // #library directive
           if(match = line.match(/^(#|)(library|import) *([a-zA-Z0-9\-_]+)$/)) {
@@ -370,7 +380,7 @@ var UnderBasic = new (function() {
 
               if(libraries[lib]) {
                 // Append to the main code
-                lines.splice.apply(lines, [i + 1, 0].concat(['#file library.' + lib]).concat(libraries[lib].split('\n').concat(['#endfile'])));
+                lines.splice.apply(lines, [i + 1, 0].concat(['#file library.' + lib]).concat(libraries[lib].replace(/###((.|\n)*?)###/g, '').replace(/\/\*((.|\n)*?)\*\//g, '').split('\n').concat(['#endfile'])));
                 // Reference the library as used
                 includedLibs.push(lib);
               }
@@ -443,13 +453,13 @@ var UnderBasic = new (function() {
           // #define, #def, #alias directives
           if(match = line.match(/^(#def|#define|#alias|def|define|alias|) *([a-zA-Z0-9_]+) *: *(.+)$/)) {
             if(keyWords.indexOf(match[1]) !== -1)
-              return error(tr('Alias "${name}" mustn\'t be a reserved keyword', [match[2]]));
+              error(tr('Alias "${name}" mustn\'t be a reserved keyword', [match[2]]));
 
             if(UnderBasic.type(match[2], true, true))
-              return error(tr('Alias "${name}" mustn\'t be variable name or a plain value', [match[2]]));
+              error(tr('Alias "${name}" mustn\'t be variable name or a plain value', [match[2]]));
 
             if(functions.hasOwnProperty(match[2]))
-              return error(tr('Alias "${name}" mustn\'t be a function name', [match[2]]));
+              error(tr('Alias "${name}" mustn\'t be a function name', [match[2]]));
 
             alias[match[2]] = match[3];
           } else
@@ -483,7 +493,7 @@ var UnderBasic = new (function() {
 
             if(options.checkVariablesValidName)
               if(!UnderBasic.variable(varName, true, true))
-                return error(tr('Bad variable name : "${name}"', {name:varName}));
+                error(tr('Bad variable name : "${name}"', {name:varName}));
 
             if(options.checkAssignments) {
               varType = tr(UnderBasic.variable(varName));
@@ -545,6 +555,7 @@ var UnderBasic = new (function() {
                     args[e.name] = e.byDefault || '';
                   } else {
                     realArgs.push(e.name);
+
                     args[e.name] = argsS[k].trim().replace(/([^"]+)|("(?:[^"\\]|\\.)+")/g, function($0, $1, $2) {
                       return $1 ? $1.replace(/\s/g, '') : $2;
                     });
@@ -553,6 +564,8 @@ var UnderBasic = new (function() {
                       error(tr('Invalid argument [${func} : ${name}] : Must be a pointer', [name, e.name]));
                       continue ;
                     }
+
+                    args[e.name] = argsS[k].trim();
 
                     if((tmp = UnderBasic.type(args[e.name], true)) !== e.type) {
                       if(e.type === 'mixed' && tmp)
@@ -567,10 +580,9 @@ var UnderBasic = new (function() {
                           type: tr(e.type),
                           specified: tr(UnderBasic.type(args[e.name], true) || 'unknown')
                       }));
+
                       continue ;
                     }
-
-                    args[e.name] = argsS[k].trim();
                   }
                 }
 
@@ -607,17 +619,17 @@ var UnderBasic = new (function() {
                     return '';
                   });
 
-                if(tmp = ret.match(/^#script *\n((.|\n)*?)#endscript/)) {
-                  try      { eval(tmp[1]); }
-                  catch(e) { console.error(e); error(tr('JavaScript runtime error in function "${name}"', [name])); }
-                  ret = ret.replace(/^#script *\n((.|\n)*?)#endscript/, '');
-                }
-
                 if(block) {
                   action    = 'CALL_BLOCK';
                   define    = { name: name, ret: ret, args: args };
                   ob_buffer = [];
                 } else {
+                  if(tmp = ret.match(/^#script *\n((.|\n)*?)#endscript/)) {
+                    try      { eval(tmp[1]); }
+                    catch(e) { console.error(e); error(tr('JavaScript runtime error in function "${name}"', [name])); }
+                    ret = ret.replace(/^#script *\n((.|\n)*?)#endscript/, '');
+                  }
+
                   ret = format(ret, args);
                   lines.splice.apply(lines, [i + 1, 0].concat(ret.split('\n')));
                 }

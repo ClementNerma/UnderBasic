@@ -157,20 +157,34 @@ function sub(string str, number start, number length) {
 }
 
 function length(string str) {
-  \length(str)
+  \length(str->ret
 }
 
 function listLength(list lst) {
-  \dim(lst)
+  \dim(lst->ret
 }
 
-function squareLength(matrix mtx) {
-  \dim(mtx)[0]*dim(mtx[1])
+function dim(list lst) {
+  \dim(lst->ret
 }
 
 function deleteVar(mixed* name) {
   \DelVar name
 }
+
+function Label(unref_mixed name) {
+  \Lbl name
+}
+
+function goto(unref_mixed name) {
+  \Goto name
+}
+
+function end() {
+  \End
+}
+
+/* 'For' loop */
 
 block for(number* iterator, number start, number end) {
   \For(iterator,start,end)
@@ -187,7 +201,7 @@ function _block(unref_mixed name, unref_mixed condition) {
     return $1 ? $1
       .replace(/\bis\b/g, '=')
       .replace(/\bisnt\b/g, '!=')
-      .replace(/\bnot\b/g, '!')
+      .replace(/\bnot\b /g, '!')
       .replace(/\bhigher\b/g, '>')
       .replace(/\blower\b/g, '<')
       .replace(/\bequals\b/g, '=') : $2;
@@ -216,8 +230,14 @@ block repeat(unref_mixed condition) {
 }
 
 block if(unref_mixed condition) {
+  #script
+  if(args._CONTENT_.split('\n').length > 1) {
+    ret = ret.split('\n');
+    ret.splice(ret.length - 1, 0, '\\Then');
+    ret.splice(ret.length, 0, '\\End');
+    ret = ret.join('\n');
+  }
+  #endscript
   _block(If, condition)
-  \Then
   ${_CONTENT_}
-  \End
 }

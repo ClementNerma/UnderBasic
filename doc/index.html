@@ -8,9 +8,10 @@
   <style type="text/css" charset="utf-8">
     body {
       font-family: "Open Sans", sans-serif;
-      background-color: rgba(0, 0, 0, 0.1)
+      background-color: rgba(0, 0, 0, 0.1);
       max-width: 900px;
       padding: 40px;
+      margin-top: 0;
       margin: auto;
     }
 
@@ -29,10 +30,21 @@
     h2:hover {
       text-decoration: underline;
     }
+
+    .text-block {
+      border : 1px solid black;
+      padding: 15px;
+    }
   </style>
 </head>
 <body>
-  <h2 id="basic-syntax" style="margin-top: 0;">1. Basic syntax</h2>
+  <div id="fr-link" class="text-block" style="display: none;">
+    Il semblerait que vous utilisiez un navigateur en language française. Souhaitez-vous consulter la documentation en français ?<br /><br />
+
+    <a id="tr-fr" href="fr.html">Documentation française</a>
+  </div>
+
+  <h2 id="basic-syntax">1. Basic syntax</h2>
   <p>
     UnderBasic has a very simple syntax. When you call a function, you can put or not parenthesis, and spaces :
     <code>print "A first message"
@@ -82,7 +94,7 @@
 
   <h2 id="use-block">4. Use a block</h2>
   <p>
-    Block are special functions which needs a <em>content code</em> to work. There are three 'main' blocks, which are three loops : for, while and repeat.<br />
+    Block are special functions which needs a <em>content code</em> to work. There are four 'main' blocks, three loops : for, while and repeat.<br />
     Let's see how the <strong>for</strong> block works. It has the same syntax as a function, but you will had to add a '{' at the end of the line. It takes three arguments :<br />
     <ul>
       <li><strong>iterator</strong>, the variable to iterate (e.g. : A)</li>
@@ -90,7 +102,9 @@
       <li><strong>end</strong>, the end value</li>
     </ul>
     So let's do a loop which run a code 5 times :
-    <code>for(A, 1, 5)</code>
+    <code>for(A, 1, 5) {
+          &tab;print "Hello !"
+          }</code>
   </p>
 
   <h2 id="use-variable">5. Use variable</h2>
@@ -207,7 +221,7 @@
     <code>
       A = add(2, 5)
     </code>
-    That's all !
+    That's all ! But be careful : the <strong>return</strong> statement <u>does not stop the function</u> !
   </p>
 
   <h2 id="make-routines">10. Make routines</h2>
@@ -216,7 +230,7 @@
     There is a way to solve it, called <em>routines</em>. That's a part of code you can use any time you want and the code is never writed two times. In fact, that's a kind of cheat becaues it uses a TI-Basic "bug", but it will not destroy your calculator ! That's simply a program particularity which permit to perform some useful operations, like routines.<br />
     But there is one big problem for routines too : The name of the routine can only be two characters, letter or digit only ;-(. That uses labels, and labels' name can be only writed like that. But there are 1296 possible labels, so you'll be able to create a lot of routines !<br />
     The second (real) problem is that you can't pass any argument to a routine. You will have to set values into variables and then run the routine. But that permit to have a very smaller code !<br />
-    To create one, we'll define an alias to don't have to right the two-chars name. We'll have to include the <strong>utils</strong> library too, so I will write here the <em>entire</em> code (so you can copy and paste it directly into the compiler) :
+    To create one, we'll define an alias to don't have to write the two-chars name. We'll have to include the <strong>utils</strong> library too, so I will write here the <em>entire</em> code (so you can copy and paste it directly into the compiler) :
     <code>
       import alias
       import utils
@@ -240,7 +254,8 @@
     And then we can call our tiny routine with the <strong>call</strong> function, which takes too the routine's name without quotes.
     But before, we define the content of Str0 :
 
-    <code>input "Your name ? ", Str0</code>
+    <code>input "Your name ? ", Str0
+          input "Your mood ? ", Str1</code>
 
     Now we can call our routine :
 
@@ -254,7 +269,8 @@
 
       #alias sayHello : Z0        # Define routine's name alias
 
-      input "Your name  ? ", Str0 # Input the user's name
+      input "Your name ? ", Str0  # Input the user's name
+      input "Your mood ? ", Str1  # Input the user's mood
       call(sayHello)              # Call the routine
       exit()                      # Exit the program (otherwise all routines will be runned !!)
 
@@ -268,7 +284,7 @@
     </code>
   </p>
 
-  <div style="border:1px solid black;padding:15px;">
+  <div class="text-block">
     This tutorial is now finished. But you can click the link below to show the advanced part of the tutorial.<br />
     It shows you how to create advanced functions (optionnal arguments, default values, pointers...), how to create blocks, and some extra features (conditionnal directives...)<br /><br />
 
@@ -347,9 +363,9 @@
 
     <h2 id="optionnal-args">2. Optionnal arguments</h2>
     Maybe you'll want one of the arguments to be optionnal. For example, you have a function which perform a complex mathematical operation, and you want to permit user having a value multiplied by a coefficient without writing another line of code.<br />
-    You'll use an <em>optionnal argument</em>. When user call the function, he will not be asked for the optionnal argument. If he specify it, it takes the value he have specified. But if he doesn't specify the argument, it takes the default value you want.
+    You'll use an <em>optionnal argument</em>. When user call the function, he will not be asked for the optionnal argument. If he specify it, it takes the value he have specified. Else, it takes the default value you've chosen.
     <code>
-      function financial(number t1, number t2, number [coefficient] = 1) { # Here, the default coefficient is 1
+      function financial(number t1, number t2, number [coefficient] = 1) { # The default coefficient is 1
       &tab;return (t1 + t2 * cos(t1) / cos(t2)) + (tan(t1)) * (t1 - coefficient)
       }
     </code>
@@ -422,7 +438,7 @@
           &tab;return (t1 + t2 * cos(t1) / cos(t2)) + (tan(t1)) * (t1 - coefficient)
           }</code>
 
-    We can now put our code between the two directives. But there is also an interesting feature with these directives : you can use <em>#set</em> to assign a value to an argument. You can also <em>create</em>n interesting argument.<br />
+    We can now put our code between the two directives. But there is also an interesting feature with these directives : you can use <em>#set</em> to assign a value to an argument. You can also <em>create</em> interesting argument.<br />
     Also, you can put UnderBasic code which will be compiled <u>only</u> if this argument is defined, like our message :
 
     <code>function financial(number t1, number t2, number [coefficient] = 1) {
@@ -482,6 +498,10 @@
       document.getElementById('advanced').style.display = 'block';
       document.getElementById('show_advanced').parentElement.remove();
     }
+
+    // For french users
+    if(navigator.language === 'fr')
+      document.getElementById('fr-link').style.display = 'block';
   </script>
   <script type="text/javascript" src="prism.js"></script>
 </body>

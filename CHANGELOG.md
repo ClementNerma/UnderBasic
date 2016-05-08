@@ -1,4 +1,13 @@
 
+UnderBasic v0.8
+- Added auto-completion
+- Improved libraries
+- Added french documentation (/doc/fr.html)
+- Improved documentation
+- Fixed: Bug when closing an undefined block (ex: using of for() without importing "alias")
+- Fixed: Compiler was returning nothing for some errors
+- Fixed: When importing library / including a file, multi-lines comments were not considered
+
 UnderBasic v0.7
 - Improved libraries
 - Added documentation page (/doc)

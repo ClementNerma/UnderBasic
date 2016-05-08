@@ -26,22 +26,56 @@ function call(label) {
 /* Utils */
 
 function choice(number col, number minRow, number choices, number default, number [allowCancel]) {
-  \default->Z
-  \1->D:If Z=1:2->D
+  \default->ret
+  \1->D:If ret=1:2->D
   \0->theta
 
   \Repeat theta
   \getKey->W
-  \Z-(Z>1 and W=25)+(W=34 and Z<choices)->Z
-  \If W=24:1->Z
-  \If W=26:choices->Z
+  \ret-(ret>1 and W=25)+(W=34 and ret<choices)->ret
+  \If W=24:1->ret
+  \If W=26:choices->ret
   \If W=105 or W=21:1->theta
   #ifdef allowCancel
-  \If W=45:theta=1
+  \If W=45:Then:0->ret:theta=1:End
   #endif
-  \If Z!=D:Then
+  \If ret!=D:Then
   \Output(minRow+D-1,col," ")
-  \Output(minRow+Z-1,col,"theta")
-  \Z->D
+  \Output(minRow+ret-1,col,"theta")
+  \ret->D
   \End:End
+}
+
+function confirm(string msg1, string [msg2], number [default] = 0) {
+  \ClrHome
+  \Output(2,8-iPart(length(msg1)/2),msg1)
+  #ifdef msg2
+  \Output(3,8-iPart(length(msg2)/2),msg2)
+  #endif
+  \Output(6,1,"   Yes     No")
+  \default->ret
+  \0->theta
+  \0->D:If ret=0:1->D
+
+  \Repeat theta
+  \getKey->W
+  \ret-(W=24)+(W=26)->ret
+  \If ret<0:1->ret:If ret>1:0->ret
+  \If W=45:Then:0->ret:1->theta:End
+  \If W=21:Then:1->theta:End
+  \If ret!=D:Then
+  \Output(6,10-8*D," ")
+  \Output(6,10-8*ret,"theta")
+  \ret->D
+  \End:End
+}
+
+function alert(string msg1, string [msg2]) {
+  \ClrHome
+  \Output(2,8-iPart(length(msg1)/2),msg1)
+  #ifdef msg2
+  \Output(3,8-iPart(length(msg2)/2),msg2)
+  #endif
+  \Output(6,5,"> OK <")
+  \Repeat getKey=21:End
 }

@@ -1,5 +1,66 @@
 
-"use strict";
+function autocomplete(cm, comp) {
+  CodeMirror.simpleHint(cm, function() {
+    var cursor = cm.getCursor();
+
+    if(cursor.ch > 0) {
+      var text = cm.getRange({line: 0, ch: 0}, cursor);
+      var typed = '';
+      var simbol = '';
+      var hints = [], outer_hints = [], eline, _w;
+      for(var i = text.length - 1; i >= 0; i--) {
+          if(text[i] == ' ' || text[i] == '<') {
+              simbol = text[i];
+              break;
+          }
+          else {
+              typed = text[i] + typed;
+          }
+      }
+
+      word  = typed.split('\n')[typed.split('\n').length - 1];
+      text  = text.slice(0, text.length - word.length);
+      line  = text.split('\n')[text.split('\n').length - 1];
+      eline = line + word;
+
+      _w    = word;
+      word  = word.split(/[^a-zA-Z0-9_]/);
+      word  = word[word.length - 1];
+      _w    = _w.substr(0, _w.length - word.length);
+
+      // text  : All text in the editor BEFORE cursor
+      // word  : Word under the cursor (only split by spaces e.g. "suite[i]" is one word)
+      // line  : All text in the line BEFORE word
+      // eline : All text in the line BEFORE cursor (= line + word)
+
+      if(eline.match(/^ *function +([a-zA-Z0-9_]+) *\(((.*), *([a-zA-Z]*)|[a-zA-Z]*) *$/))
+        hints = [_w + 'number ', _w + 'string ', _w + 'matrix ', _w + 'list ', _w + 'yvar ', _w + 'picture ', _w + 'GDB ', _w + 'program ', _w + 'appvar ', _w + 'group ', _w + 'application ', _w + ') {'];
+      else if(eline.match(/^ *function +([a-zA-Z0-9_]+) *\((.*)\) *$/))
+        hints = [_w + ' {']
+      else if(!line.trim().length && word) {
+        hints = Object.keys(comp.functions);
+
+        for(i = 0; i < hints.length; i++)
+          hints[i] += ' ';
+      } else if(eline.match(/^ *([a-zA-Z0-9_]) *(\(|) *((.*?),|(.*?)[^,]|)$/)) {
+        hints = Object.keys(comp.aliases);
+
+        for(i = 0; i < hints.length; i++)
+          hints[i] += ', ';
+      }
+
+      for(i = 0; i < hints.length; i++)
+        if(_w + word === hints[i].substr(0, (_w + word).length))
+          outer_hints.push(hints[i]);
+
+      return {
+        list: outer_hints.sort(),
+        to  : cursor,
+        from: { line: cursor.line, ch: cursor.ch - typed.length }
+      };
+    }
+  });
+}
 
 function filesClickEvent() {
     $('#files div.file').click(function() {
@@ -19,7 +80,8 @@ var localStorageSupport = (typeof localStorage !== 'undefined'),
     currentFile = 'main',
     files = {
         main: ''
-    };
+    },
+    last_code = '';
 
 var underbasicConfig = {
     localize: true,
@@ -46,6 +108,11 @@ var result = CodeMirror($('#result').get(0), {
 editor.on('change', function(codemirror, change) {
     var code = codemirror.getValue();
 
+    if(code === last_code)
+      return ;
+
+    last_code = code;
+
     if(localStorageSupport) {
         files[currentFile] = code;
         localStorage.setItem('__underbasic_autosave', JSON.stringify(files));
@@ -58,6 +125,8 @@ editor.on('change', function(codemirror, change) {
     if(result.options.mode !== mode) result.setOption('mode', mode);
     result.setValue(comp.content);
     window.comp = comp;
+
+    autocomplete(codemirror, comp);
 });
 
 if(localStorageSupport && (autoSaved = localStorage.getItem('__underbasic_autosave'))) {
@@ -149,6 +218,20 @@ $('#options').on('click', function() {
             localStorage.setItem('__underbasic_config', JSON.stringify(underbasicConfig));
     }
 });
+
+var match, req;
+
+if(match = window.location.search.match(/^\?sample=([a-zA-Z0-9_]+)$/)) {
+  req = $.ajax({
+    url  : 'samples/' + match[1] + '.ubs',
+    async: false
+  });
+
+  if(req.status !== 200)
+    alert('Failed to load sample : "' + match[1] + '"');
+  else
+    editor.setValue(req.responseText);
+}
 
 filesClickEvent();
 
