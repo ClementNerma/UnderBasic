@@ -1,8 +1,11 @@
 
 # UnderBasic
 
+<b>Please note that this is an old version</b> of the UnderBasic language. You can find the newest version [here](https://github.com/ClementNerma/UnderBasic-2).
+
 UnderBasic is a programming language for the TI-82/83/84 calculator series. It's in fact an alternative to the built-in TI-Basic.  
 You can create your own programs in UnderBasic and "compile" it for your calculator with this tool. Technically, it converts the UnderBasic code into TI-Basic.
+
 
 ## Online demo
 You can test the language here: http://underbasic.890m.com
